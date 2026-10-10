@@ -1,0 +1,16 @@
+# Core dependencies for the eval harness and reconstruction tools.
+# Tested on Python 3.10.
+torch>=2.0,<3
+torchvision>=0.15
+numpy>=1.24,<2
+scipy>=1.10
+scikit-image>=0.19
+scikit-learn>=1.2
+pillow>=9.5
+matplotlib>=3.7
+pyyaml>=6.0
+omegaconf>=2.3   # DDAD/ imports OmegaConf
+kornia>=0.6      # DDAD/anomaly_map.py
+torchmetrics>=0.11  # DDAD/metrics.py
+pandas>=2.0      # DDAD/metrics.py PRO computation
+pytest>=7.0      # tests/

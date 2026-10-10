@@ -1,0 +1,23 @@
+# CT diffusion model (same architecture as the active block in model_config.yaml)
+
+image_size: 256
+num_channels: 96
+num_res_blocks: 2
+channel_mult: "1,1,2,2,4,4"
+learn_sigma: True
+class_cond: False
+use_checkpoint: False
+attention_resolutions: "16,8"
+num_heads: 1
+num_head_channels: -1
+num_heads_upsample: -1
+use_scale_shift_norm: True
+dropout: 0.15
+resblock_updown: False
+use_fp16: False
+use_new_attention_order: False
+
+# CT-only checkpoint:
+model_path: checkpoints/model050000.pt
+# Alternative (model trained on all categories, currently active in model_config.yaml):
+# (overridden at runtime by run_ct_reconstruction.sh via CKPT_PATH)

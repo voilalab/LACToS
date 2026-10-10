@@ -1,0 +1,26 @@
+conditioning:
+  method: ps
+  params:
+    # DPS (arXiv:2209.14687) Alg.1 uses zeta_i = zeta' / ||y - A(x_hat_0)||.
+    # condition_methods.py differentiates the UN-squared norm, so this `scale`
+    # is 2*zeta'. scale 2.0 => zeta' = 1.0.
+    # Swept on 8 images x 2 draws at sigma=0.2: zeta' 0.25 -> 22.27 dB,
+    # 0.50 -> 24.15, 1.00 -> 27.11, 2.00 -> 30.70, 4.00 -> 33.37 dB.
+    scale: 2.0
+
+data:
+  name: ffhq
+  # overridden at runtime by --data_root in run_ct_reconstruction.sh
+  root: data/CT_images
+
+measurement:
+  operator:
+    name: inpainting
+  mask_opt:
+    mask_type: refined_box
+    mask_len_range: !!python/tuple [128, 129]  # for box
+    image_size: 256
+
+  noise:
+    name: gaussian
+    sigma: 2.0
