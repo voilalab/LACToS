@@ -794,6 +794,9 @@ def main():
                         "DIR/<sample_name>.npz (delta_map, gt_mask, "
                         "label_image, valid_mask) for full_metric_table.py.")
 
+    p.add_argument("--results_dir",       default=None,
+                   help="Reconstruction directory for a single-set run (sets data.results_dir; "
+                        "use --results_root for the <root>_<category>_<subcategory> layout).")
     p.add_argument("--image_dir",         default=None,
                    help="Directory with the test images (for superpixel generation); "
                         "overrides the gt_root-derived default for every subcategory.")
@@ -829,6 +832,9 @@ def main():
         cfg.setdefault("eval", {})["max_samples"] = args.max_samples
     if args.dump_maps:
         cfg.setdefault("eval", {})["dump_maps_dir"] = args.dump_maps
+    if args.results_dir:
+        cfg["data"]["results_dir"] = args.results_dir
+        cfg["data"].pop("results_root", None)
     if args.image_dir:
         cfg["data"]["image_dir"] = args.image_dir
         cfg["data"]["image_dir_fixed"] = True

@@ -6,6 +6,7 @@
 #   GPU=0 bash scripts/20_score_lactos.sh              # all three benchmarks (~2-3 GPU-hours)
 #   GPU=0 bash scripts/20_score_lactos.sh CT           # one of: CT | xray | ffhq
 #   MAX_SAMPLES=2 GPU=0 bash scripts/20_score_lactos.sh ffhq   # smoke test on two images per set
+#   RECON_ROOT=results/recons_mine GPU=0 bash scripts/20_score_lactos.sh CT   # score reconstructions you sampled yourself (stage 1)
 #
 # Operating points (superpixel size S, draws M, histogram sigma H, bins intensity x feature, lambda):
 #   CHAOS  S=100 M=5  H=0.5 16x64 lambda=1     -> one run per set, full score, --ae_encode folded (see evaluate.py)
@@ -15,7 +16,7 @@
 set -euo pipefail
 source "$(dirname "$0")/common.sh"
 M="$OUT/lactos_maps"; J="$OUT/lactos_json"; F="$OUT/figures"; LOG="$OUT/logs"; mkdir -p "$LOG"
-AE="assets/checkpoints/lactos"; RC="assets/recons"
+AE="assets/checkpoints/lactos"; RC="${RECON_ROOT:-assets/recons}"   # RECON_ROOT=results/recons_mine scores your own stage-1 output
 SEEDED="python tools/seeded_run.py"
 MS=""; [ -n "$MAX_SAMPLES" ] && MS="--max_samples $MAX_SAMPLES"
 COMMON="--backbone resnet101 --n_pca 3 --sigma_rohan 1.0 --no_plots --skip_sampling $MS"
@@ -46,7 +47,7 @@ run_ffhq() {
       if [ $variant = rgbonly ]; then tag=sp20_m20_hs1_rgbonly_b16; extra="--no_pca"; fi
       echo "[$(date '+%F %T')] ffhq/$set ($variant)"
       CUDA_VISIBLE_DEVICES=$GPU $SEEDED evaluate.py --config configs/lactos_ffhq_$set.yaml --category faces --subcategory random \
-        --gt_root "assets/data/ffhq/$set/ground_truth" --image_dir "assets/data/ffhq/$set/test" --figures_dir "$F/ffhq_$set" \
+        --results_dir "$RC/results_patches_adm_dps_$set" --gt_root "assets/data/ffhq/$set/ground_truth" --image_dir "assets/data/ffhq/$set/test" --figures_dir "$F/ffhq_$set" \
         --autoencoder_path "$AE/ae_faces.pth" --bins_rgb 16 --bins_pca 32 --smooth_sigma 1 --superpixel_target_size 20 $extra \
         $COMMON --dump_maps "$M/ffhq/$tag/$set" --output_dir "$J/ffhq/$set" > "$LOG/lactos_ffhq_${set}_$variant.log" 2>&1
     done

@@ -14,3 +14,4 @@ kornia>=0.6      # DDAD/anomaly_map.py
 torchmetrics>=0.11  # DDAD/metrics.py
 pandas>=2.0      # DDAD/metrics.py PRO computation
 pytest>=7.0      # tests/
+tqdm>=4.60      # sampling/dps/guided_diffusion progress bars
