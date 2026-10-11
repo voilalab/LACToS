@@ -89,7 +89,8 @@ def baseline_cell(bench, method):
     sys.path.insert(0, os.path.join(ROOT, "baselines"))
     from compose import pub_map                     # noqa: E402
     setting, knob = BASELINE[method][bench]
-    files = sorted(glob.glob(os.path.join(BMAPS, bench, method, setting, "*.npz")))
+    bench_dir = bench.lower()                       # baselines/table1_common.py names the benchmarks ffhq / ct / xray
+    files = sorted(glob.glob(os.path.join(BMAPS, bench_dir, method, setting, "*.npz")))
     if not files:
         return None
     if len(files) != N_IMAGES[bench]:
@@ -97,7 +98,7 @@ def baseline_cell(bench, method):
     maps, gts, valids = [], [], []
     for f in files:
         z = dict(np.load(f))
-        maps.append(pub_map(method, bench, z, knob))
+        maps.append(pub_map(method, bench_dir, z, knob))
         gts.append(z["gt_mask"].astype(np.uint8)); valids.append(z["valid_mask"].astype(bool))
     r = full_metrics(maps, gts, valids)
     return [r["pooled_auroc"], r["pooled_aupr"], r["aupro"]]

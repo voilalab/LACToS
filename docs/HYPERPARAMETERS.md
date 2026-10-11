@@ -39,8 +39,8 @@ resolution before the per-layer L2 normalisation and upsampling; `direct` evalua
 `ae.encoder(embedder(x))` literally. They are the same function; float32 round-off differs
 by ~1e-6 in the latents, which moves a few values across histogram-bin edges. The CHAOS row of
 the paper was computed with `folded` (the lab's package), the FFHQ row with `direct`. With
-`direct` on CHAOS the pooled metrics are (filled in by `docs/REPRODUCIBILITY.md` after the
-verification run).
+`direct` on CHAOS the pooled metrics are AUROC 0.9620 / AP 0.4318 / AUPRO 0.8765 (vs 0.8764 with `folded`):
+the choice matters at the fourth decimal of one metric.
 
 ## Baselines (`scripts/30_run_baselines.sh` → `baselines/infer_*.py`, composed by `baselines/compose.py`)
 

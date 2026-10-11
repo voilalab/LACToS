@@ -40,8 +40,12 @@ python scripts/40_make_table1.py --only lactos
 
 ## Determinism
 
-`sample_fast.py` draws its noise from per-(image, draw) generators and runs with TF32 enabled; on
-the same GPU model the shipped CHAOS and DVXray reconstructions are reproduced exactly. The FFHQ
-sampler seeds `torch.manual_seed(seed)` per draw; cuDNN autotuning can change the last bits on other
-hardware. Either way the reconstructions are samples from the same posterior; small numeric
-differences change the Table 1 numbers only in the last decimals (see `docs/REPRODUCIBILITY.md`).
+The FFHQ sampler (`generate_recons.py`) seeds the whole reverse process per draw
+(`torch.manual_seed`); a re-run reproduces the shipped reconstructions up to PNG rounding (smoke
+test: max 1 gray level, 0.8 % of pixels). `sample_fast.py` (CHAOS, DVXray) seeds only the
+measurement noise and the initial x_T per (image, draw); the noise of its 1000 reverse steps comes
+from the global torch RNG, so a re-run gives **different posterior draws** of the same model
+(smoke test: mean |diff| 3.6 - 4.8 gray levels). The sampler is shipped exactly as it produced the
+paper's reconstructions. Re-sampled CHAOS / DVXray sets therefore give Table 1 numbers that differ
+in the last decimals from the shipped ones; the shipped reconstructions are the ones to use for an
+exact reproduction.
