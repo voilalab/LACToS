@@ -27,7 +27,7 @@ diff against `expected/table1.json`. `docs/REPRODUCIBILITY.md` records the verif
 
 ## What is in the asset bundle
 
-**Download:** `LACToS_table1_assets.tar` (6.7 GB, SHA-256 `30ad14b301d1fa29…`, full hash in `docs/BUNDLE.md`) — **Google Drive link: TODO (insert after upload)**. It extracts to a directory `LACToS_table1_assets/` holding
+**Download:** `LACToS_table1_assets.tar` (6.7 GB, SHA-256 `0568a7940ad3eb6f…`, full hash in `docs/BUNDLE.md`) — **Google Drive link: TODO (insert after upload)**. It extracts to a directory `LACToS_table1_assets/` holding
 
 | Folder | Contents | Size |
 |---|---|---:|
