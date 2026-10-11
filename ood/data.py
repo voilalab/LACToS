@@ -310,10 +310,9 @@ def load_gt_mask(
     if category == "CT":
         if len(sample_str) > 4:
             sample_str = str(int(sample_str))
-        gt_path = (
-            f"/data2/akheirandish3/id_new_warped_images/"
-            f"masks_ood_default_large/{sample_str}_mask.png"
-        )
+        gt_path = os.path.join(
+            os.environ.get("OOD_CT_MASK_ROOT", "/data2/akheirandish3/id_new_warped_images"),
+            "masks_ood_default_large", f"{sample_str}_mask.png")
         if not os.path.exists(gt_path):
             raise FileNotFoundError(f"CT GT mask not found: {gt_path}")
         mask = np.array(Image.open(gt_path).convert("L"))[::2, ::2]

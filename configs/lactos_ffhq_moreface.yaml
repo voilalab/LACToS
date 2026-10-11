@@ -1,0 +1,55 @@
+# LACToS evaluation config for FFHQ set 'moreface' (ADM+DPS reconstructions, 20 seeds). Per-cell flags (bins, superpixel size, histogram sigma, AE)
+# are passed on the command line by scripts/20_score_lactos.sh; this file holds the data layout
+# and the fixed pipeline settings. Paths are relative to the repository root (assets/ = extracted bundle).
+sampling:
+  enabled: false
+  num_patches: 1
+
+data:
+  image_dir: assets/data/ffhq/moreface/test
+  figures_dir: results/figures
+  results_dir: assets/recons/results_patches_adm_dps_moreface
+  sample_name: samples_0
+  test_origin: adm_dps_whole
+  bottom_suffix: "4"
+  gt_root: assets/data/ffhq/moreface/ground_truth
+  gt_mask:
+    path: assets/data/ffhq/moreface/ground_truth/{sample}_mask.png
+    downsample_factor: 1
+
+embeddings:
+  backbone: resnet101
+  layers: [layer1, layer2, layer3]
+  use_patch_context: true
+  patchify_size: 3
+  proj_dim_per_layer: null
+  device: cuda
+  batch_size: 4
+
+pca: {n_components: 3}
+
+superpixels:
+  var_threshold: 0.0
+  min_pixels: 20
+  max_sub: 6
+  max_depth: 4
+  compactness: 12.0
+  alpha_grad: 10.0
+  target_size: 30
+
+scoring:
+  bins_rgb: 32
+  bins_pca: 32
+  smooth_sigma: 1.0
+  min_pixels: 2
+  use_label_as_target: true
+  eps: 1.0e-12
+  n_realizations: 1000
+  lg_metric: typicality_unsigned
+  sigma_rohan: 1.0
+
+eval:
+  delta_smooth_sigmas: []        # per-image metrics are skipped; pooled metrics come from scripts/40_make_table1.py
+  sp_anomaly_threshold: 0.5
+  save_plots: false
+  output_dir: results/lactos_json

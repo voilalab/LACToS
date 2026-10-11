@@ -33,6 +33,7 @@ from glob import glob
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 import yaml
 
 from ood.data import (load_gt_mask, load_label_image, load_reconstructions,
@@ -73,17 +74,93 @@ def load_autoencoder(ae_path, embedder, latent_dim, device):
     print(f"  AE loaded: {ae_path}  (embed_dim={embed_dim}, latent_dim={latent_dim})")
     return ae
 
-def embed_with_ae(ae, embedder, label_image, images_recon_all, batch_size, device):
-    from ood.embeddings import to_tensor01
+_FOLD_CHUNK = 64
+
+
+def _fold_plan(ae, embedder):
+    """Per-layer slices of the AE's first 1x1 conv for the folded encoder, or None if unsupported."""
+    enc0 = ae.encoder[0]
+    if not (isinstance(enc0, torch.nn.Conv2d) and enc0.kernel_size == (1, 1)
+            and enc0.bias is None and enc0.groups == 1):
+        return None
+    if embedder.use_patch_context and embedder.patchify_size % 2 == 0:
+        return None
     with torch.no_grad():
-        _, label_z = ae(embedder(to_tensor01(label_image, device=str(device))))
+        probe = torch.zeros(1, 3, 256, 256, device=enc0.weight.device)
+        feats = embedder.extractor(probe)
+        chans = []
+        for ln in embedder.layers:
+            f = feats[ln]
+            if embedder.proj_dim_per_layer is not None:
+                f = embedder.proj[ln](f)
+            chans.append(int(f.shape[1]))
+    if sum(chans) != enc0.weight.shape[1]:
+        return None
+    W, off, plan = enc0.weight.data, 0, []
+    for c in chans:
+        plan.append(W[:, off:off + c].contiguous())
+        off += c
+    return plan
+
+
+def _encode_folded(ae, embedder, x, plan):
+    """ae.encoder(embedder(x)) with the first 1x1 conv applied per layer at native resolution.
+
+    Mathematically identical to the direct path, but a different float32 evaluation order:
+    the two paths differ by ~1e-6 in the latents, which is enough to move a few latent
+    values across histogram-bin edges. The CHAOS row of the paper was computed with
+    THIS path (akheirandish3's package); FFHQ with the direct path. `--ae_encode` selects.
+    """
+    if x.min() < 0:
+        x = (x + 1) / 2.0
+    if embedder.use_imagenet_norm:
+        x = (x - embedder.mean) / embedder.std
+    feats = embedder.extractor(x)
+    H, W_ = x.shape[-2:]
+    out_hw = ((embedder.out_size, embedder.out_size)
+              if embedder.out_size is not None else (H, W_))
+    acc = None
+    for li, ln in enumerate(embedder.layers):
+        f = feats[ln]
+        if embedder.use_patch_context:
+            f = F.avg_pool2d(f, embedder.patchify_size, stride=1,
+                             padding=(embedder.patchify_size - 1) // 2,
+                             count_include_pad=True)
+        if embedder.proj_dim_per_layer is not None:
+            f = embedder.proj[ln](f)
+        proj = F.interpolate(F.conv2d(f, plan[li]), size=out_hw,
+                             mode="bilinear", align_corners=False)
+        sq = torch.zeros(f.shape[0], 1, *out_hw, device=f.device, dtype=torch.float32)
+        for c0 in range(0, f.shape[1], _FOLD_CHUNK):
+            u = F.interpolate(f[:, c0:c0 + _FOLD_CHUNK], size=out_hw,
+                              mode="bilinear", align_corners=False)
+            sq += u.float().pow(2).sum(1, keepdim=True)
+        n = sq.clamp_min(1e-24).sqrt()      # == F.normalize's denominator (eps=1e-12)
+        acc = proj / n if acc is None else acc + proj / n
+    return ae.encoder[1:](acc)
+
+
+def embed_with_ae(ae, embedder, label_image, images_recon_all, batch_size, device, ae_encode="direct"):
+    """ae_encode: 'direct' = ae(embedder(x)) (FFHQ row of the paper); 'folded' = _encode_folded (CHAOS row)."""
+    from ood.embeddings import to_tensor01
+    if ae_encode == "folded":
+        plan = _fold_plan(ae, embedder)
+        if plan is None:
+            raise ValueError("--ae_encode folded needs an AE whose first layer is a bias-free 1x1 conv")
+        encode = lambda t: _encode_folded(ae, embedder, t, plan)
+    elif ae_encode == "direct":
+        encode = lambda t: ae(embedder(t))[1]
+    else:
+        raise ValueError(f"unknown ae_encode {ae_encode!r}")
+    with torch.no_grad():
+        label_z = encode(to_tensor01(label_image, device=str(device)))
     label_pca_map = label_z.squeeze(0).permute(1,2,0).cpu().numpy()
     x_all = torch.from_numpy(images_recon_all).float().permute(0,3,1,2)
     if x_all.max() > 1.0: x_all = x_all / 255.0
     pca_list = []
     with torch.no_grad():
         for i in range(0, x_all.shape[0], batch_size):
-            _, bz = ae(embedder(x_all[i:i+batch_size].to(device)))
+            bz = encode(x_all[i:i+batch_size].to(device))
             pca_list.append(bz.cpu())
     return {"label_pca_map": label_pca_map,
             "pca_feats_recon": torch.cat(pca_list,0).permute(0,2,3,1).numpy()}
@@ -217,8 +294,10 @@ def _run_single_sample(cfg):
         s_int = str(int(m.group(1)))
         s_pad4 = f"{int(m.group(1)):04d}"
 
+        # CT lesion + body masks: OOD_CT_MASK_ROOT/{masks_ood_med_med,masks_body_ood_default_large}/image_XXXX_mask.png
+        _ct_root = os.environ.get("OOD_CT_MASK_ROOT", "/data2/akheirandish3/id_new_warped_images")
         mask_dirs = [
-            "/data2/akheirandish3/id_new_warped_images/masks_ood_med_med",
+            os.path.join(_ct_root, "masks_ood_med_med"),
         ]
 
         candidates = []
@@ -243,8 +322,8 @@ def _run_single_sample(cfg):
         gt_mask = (mask > 0).astype(np.uint8)
 
         body_candidates = [
-            f"/data2/akheirandish3/id_new_warped_images/masks_body_ood_default_large/image_{s_pad4}_mask.png",
-            f"/data2/akheirandish3/id_new_warped_images/masks_body_ood_default_large/image_{s_int}_mask.png",
+            os.path.join(_ct_root, "masks_body_ood_default_large", f"image_{s_pad4}_mask.png"),
+            os.path.join(_ct_root, "masks_body_ood_default_large", f"image_{s_int}_mask.png"),
         ]
         body_p = next((p for p in body_candidates if os.path.exists(p)), None)
         if body_p is not None:
@@ -295,7 +374,8 @@ def _run_single_sample(cfg):
     elif ae_path:
         ae_model     = load_autoencoder(ae_path, embedder, latent_dim, device)
         embed_result = embed_with_ae(ae_model, embedder, label_image, recon_all,
-                                     embed_cfg.get("batch_size",16), device)
+                                     embed_cfg.get("batch_size",16), device,
+                                     ae_encode=score_cfg.get("ae_encode", "direct"))
         del ae_model
     else:
         embed_result = embed_and_project(embedder=embedder, label_image=label_image,
@@ -419,10 +499,10 @@ def _run_subcategory(base_cfg, category, subcategory, sample_names, output_dir):
     cfg["data"]["results_dir"]  = results_dir
     cfg["data"]["category"]     = category
     cfg["data"]["subcategory"]  = subcategory
-    cfg["data"]["figures_dir"]  = ("./figures_CT" if category == "CT"
-                                   else os.path.join(base_cfg["data"]["figures_dir"],
-                                                     category, subcategory))
-    if category != "CT":
+    cfg["data"]["figures_dir"]  = os.path.join(base_cfg["data"]["figures_dir"], category, subcategory)
+    if base_cfg["data"].get("image_dir_fixed"):
+        print(f"  Image dir    : {cfg['data']['image_dir']} (--image_dir)")
+    elif category != "CT":
         category_root = os.path.dirname(cfg["data"]["gt_root"])
         cfg["data"]["image_dir"] = os.path.join(category_root, "test", subcategory)
         print(f"  Image dir    : {cfg['data']['image_dir']}")
@@ -714,6 +794,14 @@ def main():
                         "DIR/<sample_name>.npz (delta_map, gt_mask, "
                         "label_image, valid_mask) for full_metric_table.py.")
 
+    p.add_argument("--image_dir",         default=None,
+                   help="Directory with the test images (for superpixel generation); "
+                        "overrides the gt_root-derived default for every subcategory.")
+    p.add_argument("--ae_encode",         default=None, choices=["direct", "folded"],
+                   help="How the autoencoder latents are computed (see _encode_folded). "
+                        "Paper: CHAOS 'folded', FFHQ 'direct'; default 'direct'.")
+    p.add_argument("--figures_dir",       default=None,
+                   help="Cache dir for superpixel masks / figures (default from config).")
     args = p.parse_args()
 
     cfg = load_config(args.config)
@@ -741,6 +829,13 @@ def main():
         cfg.setdefault("eval", {})["max_samples"] = args.max_samples
     if args.dump_maps:
         cfg.setdefault("eval", {})["dump_maps_dir"] = args.dump_maps
+    if args.image_dir:
+        cfg["data"]["image_dir"] = args.image_dir
+        cfg["data"]["image_dir_fixed"] = True
+    if args.figures_dir:
+        cfg["data"]["figures_dir"] = args.figures_dir
+    if args.ae_encode:
+        cfg["scoring"]["ae_encode"] = args.ae_encode
 
     output_dir   = cfg["eval"]["output_dir"]
     category     = args.category or cfg["data"].get("category","cable")
