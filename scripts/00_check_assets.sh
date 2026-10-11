@@ -4,4 +4,4 @@
 #   bash scripts/00_check_assets.sh --no-sha   # layout and counts only (seconds)
 set -euo pipefail
 source "$(dirname "$0")/common.sh"
-python release_tools/check_bundle.py "$ASSETS" "$@"
+python tools/check_bundle.py "$ASSETS" "$@"

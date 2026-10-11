@@ -19,7 +19,7 @@ M="$OUT/lactos_maps"; J="$OUT/lactos_json"; F="$OUT/figures"; LOG="$OUT/logs"; m
 AE="assets/checkpoints/lactos"; RC="${RECON_ROOT:-assets/recons}"   # RECON_ROOT=results/recons_mine scores your own stage-1 output
 SEEDED="python tools/seeded_run.py"
 MS=""; [ -n "$MAX_SAMPLES" ] && MS="--max_samples $MAX_SAMPLES"
-COMMON="--backbone resnet101 --n_pca 3 --sigma_rohan 1.0 --no_plots --skip_sampling $MS"
+COMMON="--backbone resnet101 --n_pca 3 $MS"
 
 run_CT() {
   for sub in cta ctn; do

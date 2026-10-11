@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Check an extracted LACToS Table-1 asset bundle: layout, sample/draw counts, SHA-256.
 
-  python release_tools/check_bundle.py ASSETS_DIR [--no-sha]
+  python tools/check_bundle.py ASSETS_DIR [--no-sha]
 
 Exit code 0 = complete bundle. Prints every missing or mismatching item.
 """

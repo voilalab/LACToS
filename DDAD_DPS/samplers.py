@@ -9,10 +9,9 @@ Reference:
     DDAD: Mousakhan et al., "Anomaly Detection with Conditioned Denoising Diffusion Models", WACV 2024.
 """
 
-from typing import Any, List, Optional
+from typing import List, Optional
 import torch
 import numpy as np
-import os
 
 
 def _build_alpha_bar(config, device):
@@ -27,20 +26,6 @@ def _build_alpha_bar(config, device):
     betas = torch.cat([torch.zeros(1).to(device), betas], dim=0)  # [T+1]
     alpha_bar = (1 - betas).cumprod(dim=0)  # [T+1], index 0 = alpha_bar_0 = 1
     return alpha_bar
-
-
-def find_timestep_for_sigma(config, sigma, device):
-    """
-    Find the diffusion timestep t* such that sqrt(1 - alpha_bar_{t*}) ≈ sigma.
-
-    Returns the closest valid timestep (clamped to [0, trajectory_steps-1]).
-    """
-    alpha_bar = _build_alpha_bar(config, device)
-    # sqrt(1 - alpha_bar) for each timestep; index 0 is t=0, etc.
-    noise_levels = (1 - alpha_bar[1:]).sqrt()  # [T], index i = timestep i
-    # Find closest match
-    t_star = (noise_levels - sigma).abs().argmin().item()
-    return t_star
 
 
 class DPSPosteriorSampling:
@@ -152,79 +137,3 @@ class DPSPosteriorSampling:
         return xs
 
 
-class DDADReconstruction:
-    """
-    Mode 2: DDAD-style — start from x_{t*} = sqrt(α̅_{t*}) * x_clean + sqrt(1-α̅_{t*}) * noise
-    at the timestep matching sigma, then denoise with DDAD conditioning.
-    """
-
-    def __init__(self, unet, config) -> None:
-        self.unet = unet
-        self.config = config
-
-    def __call__(
-        self, x_clean: torch.Tensor, sigma: float, w: float
-    ) -> List[torch.Tensor]:
-        """
-        Args:
-            x_clean: clean image [B, C, H, W] (used to construct x_{t*} via forward process).
-            sigma: noise level — determines the starting timestep t*.
-            w: DDAD conditioning strength.
-        Returns:
-            List of intermediate samples [x_{t*}, ..., x_0].
-        """
-        device = self.config.model.device
-        alpha_bar = _build_alpha_bar(self.config, device)
-
-        def _alpha(t):
-            return alpha_bar.index_select(0, t + 1).view(-1, 1, 1, 1)
-
-        n = x_clean.size(0)
-        eta = self.config.model.eta
-        skip = self.config.model.skip
-
-        # Find starting timestep from sigma
-        t_star = find_timestep_for_sigma(self.config, sigma, device)
-        at_star = _alpha(torch.tensor([t_star]).to(device).long())
-
-        actual_sigma = (1 - at_star).sqrt().item()
-        print(f"  t* = {t_star}  (requested sigma={sigma:.4f}, actual sqrt(1-α̅_t*)={actual_sigma:.4f})")
-
-        # Construct x_{t*} via proper forward process
-        xt = at_star.sqrt() * x_clean + (1 - at_star).sqrt() * torch.randn_like(x_clean).to(device)
-
-        # Build timestep sequence up to t* (not the full test_trajectoy_steps)
-        seq = range(0, t_star + 1, skip)
-        seq_next = [-1] + list(seq[:-1])
-        xs = [xt]
-
-        # y0 for DDAD conditioning = x_clean (the reference image)
-        y0 = x_clean.to(device)
-
-        with torch.no_grad():
-            for i, j in zip(reversed(seq), reversed(seq_next)):
-                t = (torch.ones(n) * i).to(device)
-                next_t = (torch.ones(n) * j).to(device)
-                at = _alpha(t.long())
-                at_next = _alpha(next_t.long())
-
-                xt = xs[-1].to(device)
-
-                # Predict noise
-                et = self.unet(xt, t)
-
-                # DDAD conditioning: stiffened prediction
-                yt = at.sqrt() * y0 + (1 - at).sqrt() * et
-                et_hat = et - (1 - at).sqrt() * w * (yt - xt)
-
-                # Predict x0
-                x0_t = (xt - et_hat * (1 - at).sqrt()) / at.sqrt()
-
-                # DDIM reverse step
-                c1 = eta * ((1 - at / at_next) * (1 - at_next) / (1 - at)).sqrt()
-                c2 = ((1 - at_next) - c1 ** 2).sqrt()
-                xt_next = at_next.sqrt() * x0_t + c1 * torch.randn_like(x_clean) + c2 * et_hat
-
-                xs.append(xt_next)
-
-        return xs

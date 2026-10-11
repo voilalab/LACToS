@@ -1,30 +1,11 @@
-"""Unified reconstruction driver.
+"""Sample DPS reconstructions of the FFHQ test images with the guided-diffusion FFHQ model.
 
-Replaces the old one-off tools (`run_ddad_reconstruction.py`,
-`run_ddad_dps_sampling.py`) with a single entry point that dispatches to any
-sampler registered in `ood/samplers/__init__.py`.
+    python sampling/generate_recons.py --recon_config configs/recon/adm_dps_ffhq_faces.yaml [--num_seeds N --samples ID ...]
 
-Two ways to invoke:
-
-(a) Config-driven (preferred):
-    python tools/generate_recons.py --recon_config configs/recon/ddad_native_cable.yaml
-
-(b) Flat CLI:
-    python tools/generate_recons.py \\
-        --sampler ddad_native \\
-        --ckpt /path/to/unet/ckpt \\
-        --image_dir /path/to/test/images \\
-        --samples 000 001 002 003 004 005 006 007 008 009 010 \\
-        --num_seeds 20 \\
-        --out_root ./results_patches_ddad_native \\
-        --sampler_param w=2 --sampler_param test_trajectoy_steps=250
-
-Set `save_float: true` in the YAML to also write the unclamped float32
-reconstruction as `inpainting/recon_float/<seed>_0_00000.npy` (H, W, 3).
-
-Sampler-specific hyperparameters flow through `--sampler_param KEY=VAL` (flat
-CLI) or the `sampler.params` dict (YAML). Unknown keys are silently ignored by
-the sampler, so forgetting `--sampler_param` mostly-just uses sensible defaults.
+The YAML holds the sampler (`additive_dps`: y = x + sigma n, DPS reverse process) and its
+hyper-parameters, the checkpoint, the image directory, the sample ids and the output root.
+CLI flags override the YAML. Output layout (read by evaluate.py):
+    <out_root>/samples_<id>/adm_dps_whole_0_4/inpainting/{recon/<seed>_0_00000.png, label/0_00000.png, input/0_00000.png}
 """
 import argparse
 import json
@@ -41,7 +22,7 @@ sys.path.insert(0, str(ROOT))
 
 from ood.samplers import build_sampler, SAMPLERS
 from ood.samplers.io import (
-    image_to_tensor, load_adm_unet, load_ddad_unet, prepare_sample_dirs,
+    image_to_tensor, load_adm_unet, prepare_sample_dirs,
     save_image_tensor,
 )
 
@@ -123,25 +104,8 @@ def run(cfg: Dict[str, Any]) -> None:
     print(f"[out_root]     {cfg['out_root']}")
     print(f"[num_seeds]    {cfg['num_seeds']}")
 
-    # `model_backbone` selects the checkpoint format: "ddad" (the in-repo DDAD
-    # UNet, default) or "adm" (OpenAI guided-diffusion, e.g. the DPS2022 FFHQ
-    # `ffhq_10m.pt`). Both loaders return the same epsilon-only interface, so
-    # the sampler below is unaffected.
-    backbone = (cfg.get("model_backbone") or "ddad").lower()
-    if backbone not in ("ddad", "adm"):
-        raise ValueError(f"unknown model_backbone {backbone!r}; expected 'ddad' or 'adm'")
-    print(f"[backbone]     {backbone}")
-    if backbone == "adm":
-        # `model_arch` picks the ADM architecture preset (see ood/samplers/io.py
-        # ADM_ARCHS): "ffhq" for ffhq_10m.pt, "mvtec" for the single
-        # all-category model400000.pt. Defaults to ffhq so existing configs are
-        # unaffected.
-        arch = cfg.get("model_arch")
-        if arch:
-            print(f"[model_arch]   {arch}")
-        unet = load_adm_unet(cfg["ckpt"], device=device, arch=arch)
-    else:
-        unet = load_ddad_unet(cfg["ckpt"], device=device)
+    # ADM / guided-diffusion checkpoint (the DPS2022 FFHQ model); `model_arch` names the preset in ood/samplers/io.py
+    unet = load_adm_unet(cfg["ckpt"], device=device, arch=cfg.get("model_arch"))
     sampler_cfg = {**cfg["sampler"].get("params", {}), "device": device}
     sampler = build_sampler(cfg["sampler"]["name"], unet, sampler_cfg)
     meta = sampler.metadata

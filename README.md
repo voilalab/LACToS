@@ -51,7 +51,6 @@ conda create -n lactos python=3.10 && conda activate lactos
 pip install torch==2.0.1 torchvision==0.15.2 --index-url https://download.pytorch.org/whl/cu118   # the reference build
 pip install -r requirements.txt                     # numpy, scipy, scikit-image, scikit-learn, pillow, pyyaml, omegaconf, kornia, pytest
 bash scripts/00_check_assets.sh                     # verifies every file against SHA256SUMS
-pytest tests -q -m "not requires_gpu and not slow"  # unit tests, no GPU
 ```
 
 The exact environments the numbers were produced with are exported in `environment/`
@@ -73,8 +72,8 @@ GPU=0 bash scripts/30_run_baselines.sh                # or one benchmark: ffhq |
 python scripts/40_make_table1.py                      # --only lactos | --only baselines
 ```
 
-Stage 1 is not needed to reproduce the table: the reconstructions it would produce are
-shipped in `recons/`. It is there so that the full pipeline (diffusion prior → DPS
+Stage 1 is not needed to reproduce the table: the reconstructions the paper scored are included in
+the bundle (`recons/`), and stages 2–4 reproduce every cell from them. It is there so that the full pipeline (diffusion prior → DPS
 reconstructions → LACToS) can be re-run; `sampling/README.md` explains the samplers and
 how to score your own reconstructions (`RECON_ROOT=results/recons_mine`).
 
@@ -124,16 +123,18 @@ results/table1.{json,md,tex}                                  stage 4
 * **GLASS** checkpoints were selected on the test set by the upstream training code
   (`ckpt_best`); every other method's checkpoint is the final or a fixed epoch. The GLASS row is
   therefore optimistic relative to the others.
-* **DVXray "good" images are training images** of every method (the 5,000 weapon-free bags);
-  the pooled DVXray numbers are measured on training data for the anomaly-free half.
-* **CHAOS body masks** of the normal slices differ slightly between the LACToS evaluation and
-  the baseline evaluation (two versions of the body segmentation, IoU 0.94–0.98; the anomalous
-  slices use identical masks). Both are shipped and used as in the paper (`docs/PROVENANCE.md`).
+* **DVXray anomaly-free test images** are weapon-free bags from the DvXray negative set that were
+  held out from the 5,000 training images.
+* **CHAOS body masks** of the 100 normal slices differ between the LACToS evaluation and the
+  baseline evaluation (two body segmentations, IoU 0.94–0.98; the anomalous slices use identical
+  masks). Both are shipped and used as in the paper. Swapping them changes CHAOS AUROC by at most
+  0.003 and AP by at most 0.013 for any method and does not change any ranking
+  (`docs/HYPERPARAMETERS.md`, last section).
 * The CHAOS LACToS row was computed with the autoencoder's first layer folded into the feature
-  extractor (`evaluate.py --ae_encode folded`, see its docstring); it is the same function
-  evaluated in a different float32 order, which moves a handful of latent values across
-  histogram-bin edges. The FFHQ row used the direct evaluation. Stage 2 uses the right one per
-  dataset; `docs/HYPERPARAMETERS.md` lists what the other choice gives.
+  extractor (`evaluate.py --ae_encode folded`), the FFHQ row with the direct evaluation. Both are
+  the same function in a different float32 order; the choice changes at most one unit in the
+  fourth decimal (CHAOS AUPRO 0.8764 → 0.8765, FFHQ AUROC 0.8515 → 0.8516, AUPRO 0.5320 → 0.5321).
+  Stage 2 uses the paper's choice per dataset.
 * Redistribution of the test images (FFHQ photographs and movie stills, CHAOS- and
   DvXray-derived images) is subject to the respective dataset licences.
 
@@ -149,10 +150,9 @@ configs/            evaluate.py configs per dataset; configs/recon/ = FFHQ sampl
 sampling/           DPS samplers: sampling/dps (CHAOS, DVXray: guided-diffusion + sample_fast.py), generate_recons.py (FFHQ), wire_recons.py
 baselines/          table1_common.py, infer_feature.py, infer_ddad.py, compose.py, ddad_lib/ (DDAD modules)
 expected/table1.json  the paper's numbers
-tests/              unit tests + the two GPU regression tests used during verification
 docs/               HYPERPARAMETERS.md  PROVENANCE.md  BUNDLE.md  REPRODUCIBILITY.md
 environment/        pip freeze of the four environments
-release_tools/      how the bundle was staged from the lab's files (maintainers only)
+tools/              check_bundle.py (stage 0), seeded_run.py (seeds every stage-2 run)
 ```
 
 ## Acknowledgements

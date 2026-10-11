@@ -42,14 +42,6 @@ scoring:
   bins_pca: 32
   smooth_sigma: 1.0
   min_pixels: 2
-  use_label_as_target: true
-  eps: 1.0e-12
-  n_realizations: 1000
-  lg_metric: typicality_unsigned
-  sigma_rohan: 1.0
 
 eval:
-  delta_smooth_sigmas: []        # per-image metrics are skipped; pooled metrics come from scripts/40_make_table1.py
-  sp_anomaly_threshold: 0.5
-  save_plots: false
   output_dir: results/lactos_json

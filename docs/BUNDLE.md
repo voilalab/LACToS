@@ -47,8 +47,7 @@ LACToS_table1_assets/
 | data | ~1,900 PNG + JSON | 40 MB |
 | **total** | 8,203 | **6.3 GB** |
 
-The bundle was assembled with `release_tools/stage_assets.py` (lab paths inside) and is checked by
-`release_tools/check_bundle.py`, which `scripts/00_check_assets.sh` calls. Every file is a plain copy;
+The bundle is checked by `tools/check_bundle.py`, which `scripts/00_check_assets.sh` calls. Every file is a plain copy;
 there are no symlinks inside the archive.
 
 Archive: `LACToS_table1_assets.tar` — 6.7 GB, SHA-256 `0568a7940ad3eb6f80304980cf080fb01aff8305781b3eb8f86fd6df5a094df4`

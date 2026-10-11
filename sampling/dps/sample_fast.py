@@ -9,9 +9,8 @@ One process per GPU, each owning a shard of the (image, measurement) work list a
 running many reconstructions in a single batched diffusion loop.
 """
 from functools import partial
-import os, sys, time, argparse, glob, hashlib
+import os, time, argparse, glob, hashlib
 import yaml
-import numpy as np
 import torch
 import torchvision.transforms as transforms
 import matplotlib

@@ -12,13 +12,6 @@ from PIL import Image
 # The DDAD checkpoints used in this repo are DataParallel state dicts with
 # a `module.` prefix. We strip it and instantiate the non-parallel UNet.
 
-def _ensure_ddad_on_path() -> None:
-    """Prepend the bundled baselines/ddad_lib/ dir to sys.path so DDAD.unet can be imported."""
-    root = Path(__file__).resolve().parent.parent.parent
-    ddad = str(root / "baselines" / "ddad_lib")
-    if ddad not in sys.path:
-        sys.path.insert(0, ddad)
-
 
 def _strip_module_prefix(state_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
     if not state_dict:
@@ -27,25 +20,6 @@ def _strip_module_prefix(state_dict: Dict[str, torch.Tensor]) -> Dict[str, torch
     if first.startswith("module."):
         return {k.replace("module.", "", 1): v for k, v in state_dict.items()}
     return state_dict
-
-
-def load_ddad_unet(ckpt_path: str, device: str = "cuda:0") -> torch.nn.Module:
-    """Load the DDAD UNet architecture + weights from `ckpt_path`.
-
-    Architecture follows DDAD's `main.py build_model` for `DDADS=False`:
-    `UNetModel(256, 64, dropout=0.0, n_heads=4, in_channels=3)`.
-
-    Raises on strict-load mismatch, which indicates the checkpoint doesn't
-    match DDAD's expected architecture.
-    """
-    _ensure_ddad_on_path()
-    from unet import UNetModel                                   # type: ignore
-
-    unet = UNetModel(256, 64, dropout=0.0, n_heads=4, in_channels=3)
-    state = torch.load(ckpt_path, map_location="cpu", weights_only=False)
-    state = _strip_module_prefix(state)
-    unet.load_state_dict(state, strict=True)
-    return unet.to(device).eval()
 
 
 # ── ADM / guided-diffusion UNet loading (Dhariwal & Nichol) ──────────
@@ -76,15 +50,8 @@ _ADM_FFHQ_CONFIG = dict(
 # (`input_blocks.3.0.op.*`) rather than ResBlock up/down — then confirmed by a
 # strict load. This is the architecture the lost configs/model_config.yaml
 # described ("256x256 images, 96 channels" per CLAUDE.md).
-_ADM_MVTEC_CONFIG = dict(
-    image_size=256, num_channels=96, num_res_blocks=2, channel_mult="",
-    learn_sigma=True, class_cond=False, use_checkpoint=False,
-    attention_resolutions="16,8", num_heads=4, num_head_channels=64,
-    num_heads_upsample=-1, use_scale_shift_norm=True, dropout=0.0,
-    resblock_updown=False, use_fp16=False, use_new_attention_order=False,
-)
 
-ADM_ARCHS = {"ffhq": _ADM_FFHQ_CONFIG, "mvtec": _ADM_MVTEC_CONFIG}
+ADM_ARCHS = {"ffhq": _ADM_FFHQ_CONFIG}
 
 
 class _EpsilonUNet(torch.nn.Module):
@@ -186,17 +153,3 @@ def prepare_sample_dirs(
 
 # ── Effective-σ computation (for the local-Gaussian scorer) ─────────
 
-def effective_sigma_at_t_star(
-    t_star: int, trajectory_steps: int = 1000,
-    beta_start: float = 0.0001, beta_end: float = 0.02,
-) -> float:
-    """sqrt(1 - α̅_{t*}) with DDAD's linear β schedule.
-
-    Used by samplers that start from `x_{t*}` (e.g. DDAD native); the resulting
-    σ is what the local-Gaussian scorer consumes.
-    """
-    betas = np.linspace(beta_start, beta_end, trajectory_steps, dtype=np.float64)
-    alpha_bar = np.cumprod(1 - betas)
-    # t_star is 1-indexed in DDAD's convention; protect against off-by-one.
-    idx = max(0, min(t_star - 1, trajectory_steps - 1))
-    return float(np.sqrt(1.0 - alpha_bar[idx]))

@@ -38,9 +38,14 @@ the limit; DVXray uses σ = 0).
 resolution before the per-layer L2 normalisation and upsampling; `direct` evaluates
 `ae.encoder(embedder(x))` literally. They are the same function; float32 round-off differs
 by ~1e-6 in the latents, which moves a few values across histogram-bin edges. The CHAOS row of
-the paper was computed with `folded` (the lab's package), the FFHQ row with `direct`. With
-`direct` on CHAOS the pooled metrics are AUROC 0.9620 / AP 0.4318 / AUPRO 0.8765 (vs 0.8764 with `folded`):
-the choice matters at the fourth decimal of one metric.
+the paper was computed with `folded` (the lab's package), the FFHQ row with `direct`. Both encoders on both datasets (pooled AUROC / AP / AUPRO):
+
+| | `folded` | `direct` |
+|---|---|---|
+| CHAOS | **0.9620 / 0.4318 / 0.8764** (paper) | 0.9620 / 0.4318 / 0.8765 |
+| FFHQ | 0.8516 / 0.1177 / 0.5321 | **0.8515 / 0.1177 / 0.5320** (paper) |
+
+DVXray uses λ = 0 (no autoencoder) and is unaffected.
 
 ## Baselines (`scripts/30_run_baselines.sh` → `baselines/infer_*.py`, composed by `baselines/compose.py`)
 
@@ -66,3 +71,21 @@ slices, `data/CT/body_masks_baselines` for the normal slices); all pixels elsewh
 | steps | 1000 DDPM | 1000 | 1000 (skip 1), η = 1 |
 | draws | 5 (paper), seed 3 | 20, seed 3 | 20 seeds (0–19) |
 | prior | `ct_model050000.pt` | `xray_model500000.pt` | `ffhq_10m.pt` |
+
+## CHAOS body masks of the normal slices
+
+LACToS was evaluated inside `data/CT/masks/masks_body_ood_default_large/image_6XXX_mask.png`
+(a body segmentation computed from the image when the normal slices were wired in), the
+baselines inside `data/CT/body_masks_baselines/image_6XXX_mask.png` (the dataset's body masks);
+IoU between the two is 0.944–0.985, and the anomalous slices use identical masks everywhere.
+Pooled CHAOS metrics with the masks swapped (AUROC / AP / AUPRO):
+
+| Method | as in the paper | with the other mask set |
+|---|---|---|
+| LACToS | 0.9620 / 0.4318 / 0.8764 | 0.9625 / 0.4444 / 0.8781 |
+| PatchCore | 0.9297 / 0.0590 / 0.6811 | 0.9291 / 0.0571 / 0.6793 |
+| SimpleNet | 0.7464 / 0.0193 / 0.4191 | 0.7436 / 0.0178 / 0.4120 |
+| SuperSimpleNet | 0.3786 / 0.0051 / 0.0332 | 0.3789 / 0.0051 / 0.0333 |
+| EfficientAD | 0.6664 / 0.0105 / 0.2513 | 0.6638 / 0.0103 / 0.2485 |
+| GLASS | 0.8318 / 0.0410 / 0.5530 | 0.8325 / 0.0406 / 0.5542 |
+| DDAD | 0.9707 / 0.3159 / 0.8676 | 0.9706 / 0.3035 / 0.8675 |

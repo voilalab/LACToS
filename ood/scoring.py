@@ -28,7 +28,6 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import torch
 import torch.nn.functional as F
-from scipy.ndimage import gaussian_filter
 
 
 # Maximum elements for a dense (n_sp × n_bins) histogram tensor.
@@ -43,12 +42,6 @@ MAX_HIST_ELEMENTS = 200_000_000
 def quantize_u8_to_bins(x_u8: np.ndarray, bins: int) -> np.ndarray:
     """Map [0,255] uint8 → [0, bins-1].  Returns uint8."""
     return ((x_u8.astype(np.uint16) * bins) // 256).astype(np.uint8)
-
-
-def quantize_pca_to_bins(x_pca: np.ndarray, bins: int) -> np.ndarray:
-    """Legacy hard clip to [-1,1].  Kept for CPU reference path."""
-    x = np.clip(x_pca, -1.0, 1.0)
-    return np.clip(((x + 1.0) / 2.0 * bins).astype(np.int32), 0, bins - 1).astype(np.uint8)
 
 
 def quantize_pca_adaptive(
@@ -229,105 +222,11 @@ def _sparse_entropy_and_nll(
 # CPU reference (unchanged algorithm)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def joint_nd_pmf(rgb_q, pca_q, bins_rgb, bins_pca, smooth_sigma=1.0, eps=1e-12):
-    r, g, b  = rgb_q[:,0].astype(np.int64), rgb_q[:,1].astype(np.int64), rgb_q[:,2].astype(np.int64)
-    hist_rgb = np.bincount(np.ravel_multi_index((r,g,b), dims=(bins_rgb,)*3),
-                           minlength=bins_rgb**3).astype(np.float64).reshape((bins_rgb,)*3)
-    if smooth_sigma > 0: hist_rgb = gaussian_filter(hist_rgb, sigma=smooth_sigma, mode="nearest")
-    pmf_rgb  = (hist_rgb/hist_rgb.sum()) + eps; pmf_rgb /= pmf_rgb.sum()
-
-    k        = pca_q.shape[1]
-    hist_pca = np.bincount(np.ravel_multi_index(tuple(pca_q[:,i].astype(np.int64) for i in range(k)),
-                                                dims=(bins_pca,)*k),
-                           minlength=bins_pca**k).astype(np.float64).reshape((bins_pca,)*k)
-    if smooth_sigma > 0: hist_pca = gaussian_filter(hist_pca, sigma=smooth_sigma, mode="nearest")
-    pmf_pca  = (hist_pca/hist_pca.sum()) + eps; pmf_pca /= pmf_pca.sum()
-    return pmf_rgb, pmf_pca
-
-
-def entropy_bits_combined(pmf_rgb, pmf_pca):
-    def _h(p): return float(-np.sum(p.ravel() * np.log2(p.ravel())))
-    return _h(pmf_rgb) + _h(pmf_pca)
-
-
-def avg_neg_logp_bits_combined(rgb_q, pca_q, pmf_rgb, pmf_pca):
-    r, g, b = rgb_q[:,0].astype(np.int64), rgb_q[:,1].astype(np.int64), rgb_q[:,2].astype(np.int64)
-    k       = pca_q.shape[1]
-    return (float(-np.mean(np.log2(pmf_rgb[r,g,b]))) +
-            float(-np.mean(np.log2(pmf_pca[tuple(pca_q[:,i].astype(np.int64) for i in range(k))]))))
-
-
-def compute_delta_map(
-    labels_fine:      np.ndarray,
-    parent_map:       Optional[Dict[int, List[int]]] = None,
-    images_recon_all: np.ndarray = None,
-    pca_feats_recon:  np.ndarray = None,
-    label_image:      np.ndarray = None,
-    label_pca_map:    np.ndarray = None,
-    bins_rgb: int = 32, bins_pca: int = 8,
-    smooth_sigma: float = 0.1, min_pixels: int = 2,
-    use_label_as_target: bool = True, eps: float = 1e-12,
-) -> Tuple[np.ndarray, Dict, List[int]]:
-    """CPU per-superpixel reference implementation."""
-    H_img, W_img = labels_fine.shape
-    delta_map = np.full((H_img, W_img), np.nan, dtype=np.float32)
-    info: Dict = {}; labels_used: List[int] = []
-    child_to_parent: Dict[int,int] = {}
-    if parent_map:
-        for oid, ch in parent_map.items():
-            for c in ch: child_to_parent[c] = oid
-
-    for rid in sorted(np.unique(labels_fine).astype(int).tolist()):
-        sp_mask = labels_fine == rid
-        n_pix   = int(sp_mask.sum())
-        if n_pix < min_pixels: continue
-        rows, cols     = np.where(sp_mask)
-        recon_rgb      = images_recon_all[:, rows, cols, :3].reshape(-1, 3).astype(np.uint8)
-        if recon_rgb.shape[0] == 0: continue
-        recon_pca_flat = pca_feats_recon[:, rows, cols, :].reshape(-1, pca_feats_recon.shape[-1])
-        pca_min = np.percentile(recon_pca_flat, 1,  axis=0)
-        pca_max = np.percentile(recon_pca_flat, 99, axis=0)
-        rq_rgb  = quantize_u8_to_bins(recon_rgb, bins_rgb)
-        rq_pca  = quantize_pca_adaptive(recon_pca_flat, bins_pca, pca_min, pca_max)
-        pmf_rgb, pmf_pca = joint_nd_pmf(rq_rgb, rq_pca, bins_rgb, bins_pca, smooth_sigma, eps)
-        H_bits = entropy_bits_combined(pmf_rgb, pmf_pca)
-        if not (use_label_as_target and label_image is not None): continue
-        tgt_rgb = label_image[sp_mask, :3].astype(np.uint8)
-        tgt_pca = label_pca_map[sp_mask]
-        if tgt_rgb.shape[0] == 0: continue
-        avg_nlogp = avg_neg_logp_bits_combined(
-            quantize_u8_to_bins(tgt_rgb, bins_rgb),
-            quantize_pca_adaptive(tgt_pca, bins_pca, pca_min, pca_max),
-            pmf_rgb, pmf_pca)
-        delta_sp = float(np.abs(avg_nlogp - H_bits))
-        delta_map[sp_mask] = delta_sp
-        info[int(rid)] = {"orig_parent": child_to_parent.get(rid), "num_pixels": n_pix,
-                          "H_bits": float(H_bits), "avg_neg_logp_bits": float(avg_nlogp),
-                          "delta_sp": float(delta_sp)}
-        labels_used.append(int(rid))
-    return delta_map, info, sorted(labels_used)
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # GPU-accelerated implementation
 # ─────────────────────────────────────────────────────────────────────────────
-from skimage.color import rgb2hsv
 
-def extract_hsv_features(img_rgb_u8: np.ndarray) -> np.ndarray:
-    """Convert to HSV and return as uint8 with per-channel scaling."""
-    hsv = rgb2hsv(img_rgb_u8.astype(np.float32) / 255.0)
-    # H in [0,1], S in [0,1], V in [0,1] — quantise each independently
-    return (hsv * 255).clip(0, 255).astype(np.uint8)
-def shift_hue_channel(hsv_u8: np.ndarray, shift: int = 128) -> np.ndarray:
-    """
-    Rotate the hue channel by `shift` bins (mod 256) so that the
-    dominant hue of the scene lands near the centre of the histogram,
-    avoiding the wraparound discontinuity at H=0/255.
-    Call once on the full recon batch, use the same shift for the label.
-    """
-    out = hsv_u8.copy()
-    out[..., 0] = (hsv_u8[..., 0].astype(np.int16) + shift) % 256
-    return out.astype(np.uint8)
 
 def compute_delta_map_gpu(
     labels_fine:      np.ndarray,

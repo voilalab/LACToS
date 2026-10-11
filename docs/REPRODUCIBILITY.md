@@ -9,13 +9,13 @@
 63/63 cells agree at 4 decimals.   PASS
 ```
 
-Regression tests run before the full runs (lab reference dumps = the files the paper's numbers
-were computed from):
+Regression checks run before the full runs (maintainers' tools against the lab's reference dumps,
+the files the paper's numbers were computed from; not part of this branch):
 
 | test | what it checks | result |
 |---|---|---|
-| `tests/test_table1_dumps.py` | LACToS delta maps of the first 2 images of every set vs the lab dumps | CT, X-ray, FFHQ: max abs diff <= 1e-4 (CT needs `--ae_encode folded`) |
-| `tests/test_table1_baselines.py` | published-blur maps of all 6 baselines, 2 images per set, vs the lab raw maps | r = 1.000000 and max diff 0 for all methods, except PatchCore max diff 2e-5 (GPU k-NN vs CPU faiss) |
+| LACToS dump check | LACToS delta maps of the first 2 images of every set vs the lab dumps | CT, X-ray, FFHQ: max abs diff <= 1e-4 (CT needs `--ae_encode folded`) |
+| baseline map check | published-blur maps of all 6 baselines, 2 images per set, vs the lab raw maps | r = 1.000000 and max diff 0 for all methods, except PatchCore max diff 2e-5 (GPU k-NN vs CPU faiss) |
 | sampler smoke tests (1 image, 1 draw) | `scripts/10_sample_*.sh` run end to end | FFHQ draw = shipped draw up to 1 gray level; CHAOS / DVXray draws differ (unseeded reverse-step noise, see `sampling/README.md`) |
 
 Hardware / software of the run: NVIDIA RTX A6000 (48 GB), CUDA 11.8 driver stack, Python 3.10.20,

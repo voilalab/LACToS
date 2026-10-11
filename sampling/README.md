@@ -47,5 +47,5 @@ measurement noise and the initial x_T per (image, draw); the noise of its 1000 r
 from the global torch RNG, so a re-run gives **different posterior draws** of the same model
 (smoke test: mean |diff| 3.6 - 4.8 gray levels). The sampler is shipped exactly as it produced the
 paper's reconstructions. Re-sampled CHAOS / DVXray sets therefore give Table 1 numbers that differ
-in the last decimals from the shipped ones; the shipped reconstructions are the ones to use for an
-exact reproduction.
+in the last decimals from the shipped ones; the reconstructions in the bundle are the ones Table 1 was computed from and the ones to
+use for an exact reproduction.
