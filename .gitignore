@@ -4,3 +4,6 @@ figures*/
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# upstream baseline code is fetched by scripts/fetch_third_party.sh
+third_party/*/

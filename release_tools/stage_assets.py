@@ -122,6 +122,9 @@ def stage(out):
         for m in (a, nrm):
             cp(f"{PKG}/data/id_new_warped_images/masks_ood_med_med/{m}_mask.png", f"{out}/data/CT/masks/masks_ood_med_med/{m}_mask.png")
             cp(f"{PKG}/data/id_new_warped_images/masks_body_ood_default_large/{m}_mask.png", f"{out}/data/CT/masks/masks_body_ood_default_large/{m}_mask.png")
+        # body masks used by the BASELINE evaluation of the normal slices (handoff CT/body_masks, derived
+        # differently from the masks_body_ood_default_large set LACToS used; IoU 0.94-0.98, see docs/PROVENANCE.md)
+        cp(f"{H}/CT/body_masks/{a}_mask.png", f"{out}/data/CT/body_masks_baselines/{nrm}_mask.png")
     cp(f"{H}/CT/grid_subset_selection.json", f"{out}/data/CT/grid_subset_selection.json")
     for sub, hs in (("xrsc", "scissors"), ("xrgd", "good")):
         cp(f"{H}/xray/test/{hs}", f"{out}/data/xray/test/{sub}")

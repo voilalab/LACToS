@@ -1,0 +1,50 @@
+# DDAD faces detection config (E1-faces: reproduce DDAD baseline on faces).
+# Usage: cd DDAD && python main.py --config config_faces.yaml --detection True
+
+data:
+  name: MVTec
+  data_dir: /data/akheirandish3/mvtec_ad
+  category: faces
+  test_subfolder: random              # faces anomalies live under test/random/
+  image_size: 256
+  batch_size: 32
+  DA_batch_size: 16
+  test_batch_size: 1
+  mask: True
+  input_channel: 3
+
+model:
+  DDADS: False
+  checkpoint_dir: /data/akheirandish3/DDAD_checkpoints/checkpoints/MVTec
+  checkpoint_name: weights
+  exp_name: default
+  feature_extractor: wide_resnet101_2
+  learning_rate: 3e-4
+  weight_decay: 0.05
+  epochs: 250
+  load_chp: 2000
+  DA_epochs: 4
+  DA_chp: 0
+  v: 1
+  w: 2
+  w_DA: 3
+  DLlambda: 0.1
+  trajectory_steps: 1000
+  test_trajectoy_steps: 250
+  test_trajectoy_steps_DA: 250
+  skip: 25
+  skip_DA: 25
+  eta: 1
+  beta_start: 0.0001
+  beta_end: 0.02
+  device: cuda
+  save_model: True
+  num_workers: 2
+  seed: 42
+  use_frozen_fe: True
+
+metrics:
+  auroc: True
+  pro: False
+  misclassifications: False
+  visualisation: False

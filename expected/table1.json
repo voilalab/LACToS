@@ -1,0 +1,30 @@
+{
+  "_comment": "Table 1 of the LACToS ICLR 2027 submission: pooled pixel-level AUROC / AP / AUPRO(FPR<=0.3). Keys: benchmark -> method -> [auroc, ap, aupro]. CT = CHAOS, xray = DVXray (scissors), ffhq = FFHQ.",
+  "CT": {
+    "patchcore":      [0.9297, 0.0590, 0.6811],
+    "simplenet":      [0.7464, 0.0193, 0.4191],
+    "supersimplenet": [0.3786, 0.0051, 0.0332],
+    "efficientad":    [0.6664, 0.0105, 0.2513],
+    "glass":          [0.8318, 0.0410, 0.5530],
+    "ddad":           [0.9707, 0.3159, 0.8676],
+    "lactos":         [0.9620, 0.4318, 0.8764]
+  },
+  "ffhq": {
+    "patchcore":      [0.8491, 0.0798, 0.4094],
+    "simplenet":      [0.7162, 0.0537, 0.3174],
+    "supersimplenet": [0.7647, 0.0772, 0.4047],
+    "efficientad":    [0.6200, 0.0405, 0.2365],
+    "glass":          [0.6707, 0.0345, 0.2440],
+    "ddad":           [0.7469, 0.0563, 0.3083],
+    "lactos":         [0.8515, 0.1177, 0.5320]
+  },
+  "xray": {
+    "patchcore":      [0.9640, 0.0545, 0.8141],
+    "simplenet":      [0.9234, 0.0254, 0.6577],
+    "supersimplenet": [0.8688, 0.0165, 0.5351],
+    "efficientad":    [0.9184, 0.0235, 0.6592],
+    "glass":          [0.8944, 0.0155, 0.6062],
+    "ddad":           [0.8567, 0.0118, 0.5183],
+    "lactos":         [0.9607, 0.0568, 0.8179]
+  }
+}

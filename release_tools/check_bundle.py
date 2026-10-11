@@ -31,7 +31,7 @@ for b in ("ffhq", "ct", "xray"):
                        f"checkpoints/baselines/{b}/efficientad/autoencoder_final.pth", f"checkpoints/baselines/{b}/efficientad/norm_stats.pt"]
 EXPECTED_DATA_COUNTS = {  # dir : (n_png, suffix)
     "data/CT/test/cta": 100, "data/CT/test/ctn": 100, "data/CT/ground_truth/cta": 100, "data/CT/ground_truth/ctn": 100,
-    "data/CT/masks/masks_ood_med_med": 200, "data/CT/masks/masks_body_ood_default_large": 200,
+    "data/CT/masks/masks_ood_med_med": 200, "data/CT/masks/masks_body_ood_default_large": 200, "data/CT/body_masks_baselines": 100,
     "data/xray/test/xrsc": 72, "data/xray/test/xrgd": 72, "data/xray/ground_truth/xrsc": 72, "data/xray/ground_truth/xrgd": 72,
     "data/ffhq/faces/test": 22, "data/ffhq/faces/ground_truth": 22,
     "data/ffhq/moreface/test": 28, "data/ffhq/moreface/ground_truth": 28,
