@@ -165,7 +165,7 @@ def main():
     ap.add_argument("--out_root", default=C.OUT_ROOT)
     ap.add_argument("--limit", type=int, default=0, help="first N images per set (smoke test)")
     ap.add_argument("--force", action="store_true")
-    ap.add_argument("--nopad", action="store_true", help="EfficientAD: skip the 4-px pad (as akheirandish3's CT/X-ray scripts); setting 'nopad'")
+    ap.add_argument("--nopad", action="store_true", help="EfficientAD: skip the 4-px pad (as the lab's CT/X-ray scripts); setting 'nopad'")
     a = ap.parse_args()
     torch.manual_seed(0)
     dev = torch.device(a.device)

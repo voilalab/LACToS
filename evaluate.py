@@ -109,7 +109,7 @@ def _encode_folded(ae, embedder, x, plan):
     Mathematically identical to the direct path, but a different float32 evaluation order:
     the two paths differ by ~1e-6 in the latents, which is enough to move a few latent
     values across histogram-bin edges. The CHAOS row of the paper was computed with
-    THIS path (akheirandish3's package); FFHQ with the direct path. `--ae_encode` selects.
+    THIS path (the lab's package copy of the scorer); FFHQ with the direct path. `--ae_encode` selects.
     """
     if x.min() < 0:
         x = (x + 1) / 2.0
@@ -295,7 +295,7 @@ def _run_single_sample(cfg):
         s_pad4 = f"{int(m.group(1)):04d}"
 
         # CT lesion + body masks: OOD_CT_MASK_ROOT/{masks_ood_med_med,masks_body_ood_default_large}/image_XXXX_mask.png
-        _ct_root = os.environ.get("OOD_CT_MASK_ROOT", "/data2/akheirandish3/id_new_warped_images")
+        _ct_root = os.environ.get("OOD_CT_MASK_ROOT", "assets/data/CT/masks")
         mask_dirs = [
             os.path.join(_ct_root, "masks_ood_med_med"),
         ]

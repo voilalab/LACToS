@@ -311,7 +311,7 @@ def load_gt_mask(
         if len(sample_str) > 4:
             sample_str = str(int(sample_str))
         gt_path = os.path.join(
-            os.environ.get("OOD_CT_MASK_ROOT", "/data2/akheirandish3/id_new_warped_images"),
+            os.environ.get("OOD_CT_MASK_ROOT", "assets/data/CT/masks"),
             "masks_ood_default_large", f"{sample_str}_mask.png")
         if not os.path.exists(gt_path):
             raise FileNotFoundError(f"CT GT mask not found: {gt_path}")

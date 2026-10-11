@@ -3,7 +3,7 @@
 
 data:
   name: MVTec
-  data_dir: /data/akheirandish3/mvtec_ad
+  data_dir: unused   # images are passed explicitly by baselines/infer_ddad.py
   category: faces
   test_subfolder: random              # faces anomalies live under test/random/
   image_size: 256
@@ -15,7 +15,7 @@ data:
 
 model:
   DDADS: False
-  checkpoint_dir: /data/akheirandish3/DDAD_checkpoints/checkpoints/MVTec
+  checkpoint_dir: unused   # the UNet is loaded from assets/checkpoints/baselines/<bench>/ddad/unet.pth
   checkpoint_name: weights
   exp_name: default
   feature_extractor: wide_resnet101_2

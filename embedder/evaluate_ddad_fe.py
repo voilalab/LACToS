@@ -15,17 +15,9 @@ the normal embedder (ImageNet resnet101), it loads the DDAD fine-tuned weights
 given by env var DDAD_FE_WEIGHTS into the feature extractor. Then run the
 standard PCA path (do NOT pass --autoencoder_path).
 
-Usage (run from repo root, env `ood`):
-  DDAD_FE_WEIGHTS=experiments/.../cable/checkpoints/feat8.pth \
-  python all_categories_embedder/evaluate_ddad_fe.py \
-      --config configs/experiment_ddad_native.yaml \
-      --category cable --all_subcategories \
-      --results_root ./results_patches_ddad_native \
-      --gt_root /data/akheirandish3/mvtec_ad/cable/ground_truth \
-      --skip_sampling --n_pca 3 --bins_pca 32 --bins_rgb 32 \
-      --superpixel_target_size 30 --smooth_sigma 1 --results_suffix _1 \
-      --output_dir ./results_eval_ddad_fe/s1/feat8/cable
-Or use run_eval_ddad_fe.sh.
+Usage (from the repository root; see scripts/20_score_lactos.sh for the DVXray run):
+  DDAD_FE_WEIGHTS=assets/checkpoints/lactos/backbone_xray_ddad_lastlayer_feat4.pth \
+  python embedder/evaluate_ddad_fe.py --config configs/lactos_xray.yaml --category xray --subcategory xrsc ...
 """
 import os
 import sys
