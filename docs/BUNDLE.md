@@ -51,4 +51,5 @@ The bundle was assembled with `release_tools/stage_assets.py` (lab paths inside)
 `release_tools/check_bundle.py`, which `scripts/00_check_assets.sh` calls. Every file is a plain copy;
 there are no symlinks inside the archive.
 
-Archive: `LACToS_table1_assets.tar` — size and SHA-256: TODO (filled in by the maintainer after `tar`).
+Archive: `LACToS_table1_assets.tar` — 6.7 GB, SHA-256 `30ad14b301d1fa29908901a1cb2b20f43d4ae1d869b464c4444a6b081c2a8654`
+(`tar -cf LACToS_table1_assets.tar LACToS_table1_assets`, uncompressed: the contents are PNG and PyTorch files that do not compress).

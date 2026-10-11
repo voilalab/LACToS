@@ -28,8 +28,7 @@ this branch plus the asset bundle (see `docs/REPRODUCIBILITY.md`).
 
 ## What is in the asset bundle
 
-**Download:** `LACToS_table1_assets.tar` — **Google Drive link: TODO (insert after upload)**
-(size and SHA-256 in `docs/BUNDLE.md`). It extracts to a directory `LACToS_table1_assets/` holding
+**Download:** `LACToS_table1_assets.tar` (6.7 GB, SHA-256 `30ad14b301d1fa29…`, full hash in `docs/BUNDLE.md`) — **Google Drive link: TODO (insert after upload)**. It extracts to a directory `LACToS_table1_assets/` holding
 
 | Folder | Contents | Size |
 |---|---|---:|
