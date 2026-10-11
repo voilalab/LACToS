@@ -1,0 +1,14 @@
+# FFHQ set 'faces_normal': DPS on the guided-diffusion FFHQ model (DPS2022 ffhq_10m.pt).
+# Paper Table 5: sigma 0.01, scale 0.1, 1000 steps (skip 1), eta 1, 20 seeds. Used by scripts/10_sample_ffhq.sh.
+sampler:
+  name: additive_dps
+  params: {sigma: 0.01, scale: 0.1, skip: 1, eta: 1.0, trajectory_steps: 1000, beta_start: 0.0001, beta_end: 0.02}
+model_backbone: adm
+model_arch: ffhq
+ckpt: assets/checkpoints/diffusion/ffhq_10m.pt
+test_origin_override: adm_dps_whole
+image_dir: assets/data/ffhq/faces_normal/test
+samples: ["1000", "1001", "1002", "1003", "1004", "1005", "1006", "1007", "1008", "1009", "1010", "1011", "1012", "1013", "1014", "1015", "1016", "1017", "1018", "1019", "1020", "1021", "1022", "1023", "1024", "1025", "1026", "1027", "1028", "1029", "1030", "1031", "1032", "1033", "1034", "1035", "1036", "1037", "1038", "1039", "1040", "1041", "1042", "1043", "1044", "1045", "1046", "1047", "1048", "1049"]
+num_seeds: 20
+out_root: results/recons_mine/results_patches_adm_dps_faces_normal
+bottom_suffix: "4"
