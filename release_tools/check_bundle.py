@@ -79,6 +79,16 @@ def sha_problems(root):
     path = os.path.join(root, "SHA256SUMS")
     if not os.path.exists(path):
         return ["SHA256SUMS missing"]
+    listed = {line.rstrip("\n").split("  ", 1)[1] for line in open(path)}
+    for d, _, files in os.walk(root):
+        for f in files:
+            rel = os.path.relpath(os.path.join(d, f), root)
+            if rel not in listed and rel != "SHA256SUMS":
+                out.append(f"file not listed in SHA256SUMS (stray?): {rel}")
+    for d, dirs, _ in os.walk(root):
+        for x in dirs:
+            if os.path.islink(os.path.join(d, x)):
+                out.append(f"unexpected symlink: {os.path.relpath(os.path.join(d, x), root)}")
     for line in open(path):
         h, rel = line.rstrip("\n").split("  ", 1)
         p = os.path.join(root, rel)

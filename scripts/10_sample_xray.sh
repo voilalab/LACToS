@@ -22,7 +22,7 @@ for sub in "${SETS[@]}"; do
       --diffusion_config configs/diffusion_config.yaml --task_config configs/xray_inpainting_sigma2.yaml \
       --data_root "$ROOT/assets/data/xray/test/$sub" --save_dir "$RAW/xray_$sub" \
       --num_measurements "$DRAWS" --batch 14 --scale 1.0 --grad_norm per_sample --seed 3 \
-      --shard "$SHARD" --num_shards "$NSHARDS" $IMG ) 2>&1 | tee "$OUT/logs/sample_xray_${sub}_shard$SHARD.log" | grep -v "^\[.*done |" || true
+      --start 0 --end 99999 --shard "$SHARD" --num_shards "$NSHARDS" $IMG ) 2>&1 | tee "$OUT/logs/sample_xray_${sub}_shard$SHARD.log" | { grep -v "^\[.*done |" || [ $? -eq 1 ]; }
   python sampling/wire_recons.py --src "$RAW/xray_$sub" --dst "$OUT/recons_mine/results_patches_ddad_native_xray_$sub" --n_draws "$DRAWS"
 done
 echo "done. Score them with:  RECON_ROOT=$OUT/recons_mine GPU=$GPU bash scripts/20_score_lactos.sh xray"

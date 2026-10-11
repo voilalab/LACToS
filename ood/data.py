@@ -312,7 +312,7 @@ def load_gt_mask(
             sample_str = str(int(sample_str))
         gt_path = os.path.join(
             os.environ.get("OOD_CT_MASK_ROOT", "assets/data/CT/masks"),
-            "masks_ood_default_large", f"{sample_str}_mask.png")
+            "masks_ood_med_med", f"{sample_str}_mask.png")
         if not os.path.exists(gt_path):
             raise FileNotFoundError(f"CT GT mask not found: {gt_path}")
         mask = np.array(Image.open(gt_path).convert("L"))[::2, ::2]

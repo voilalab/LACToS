@@ -17,6 +17,6 @@ for set in "${SETS[@]}"; do
   SMP=""; [ -n "${SAMPLES:-}" ] && SMP="--samples $SAMPLES"
   CUDA_VISIBLE_DEVICES=$GPU python sampling/generate_recons.py --recon_config "configs/recon/adm_dps_ffhq_$set.yaml" \
     --ckpt assets/checkpoints/diffusion/ffhq_10m.pt --image_dir "assets/data/ffhq/$set/test" \
-    --out_root "$OUT/recons_mine/results_patches_adm_dps_$set" --num_seeds "$SEEDS" $SMP 2>&1 | tee "$OUT/logs/sample_ffhq_$set.log" | grep -v "seeds .* done" || true
+    --out_root "$OUT/recons_mine/results_patches_adm_dps_$set" --num_seeds "$SEEDS" $SMP 2>&1 | tee "$OUT/logs/sample_ffhq_$set.log" | { grep -v "seeds .* done" || [ $? -eq 1 ]; }
 done
 echo "done. Score them by pointing the FFHQ configs' data.results_dir at $OUT/recons_mine (see sampling/README.md)."

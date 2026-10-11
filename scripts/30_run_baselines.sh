@@ -7,7 +7,7 @@
 #
 # Each method runs under its own conda environment (environment/*.txt):
 #   patchcore -> env "patchcore" (python 3.8, faiss)      simplenet, glass -> env "simplenet" (python 3.8)
-#   supersimplenet -> env "ssn_env"                        efficientad, ddad -> env "ddad" (python 3.10)
+#   supersimplenet -> env "ssn_env"                        efficientad, ddad -> the current interpreter (LACToS env)
 # Override the interpreters with PY_PATCHCORE=..., PY_SIMPLENET=..., PY_SSN=..., PY_DDAD=... or the
 # environment directory with CONDA_ENVS=/path/to/conda/envs. Upstream code: scripts/fetch_third_party.sh.
 #
@@ -20,7 +20,7 @@ CONDA_ENVS="${CONDA_ENVS:-$(conda info --base 2>/dev/null)/envs}"
 PY_PATCHCORE="${PY_PATCHCORE:-$CONDA_ENVS/patchcore/bin/python}"
 PY_SIMPLENET="${PY_SIMPLENET:-$CONDA_ENVS/simplenet/bin/python}"
 PY_SSN="${PY_SSN:-$CONDA_ENVS/ssn_env/bin/python}"
-PY_DDAD="${PY_DDAD:-$CONDA_ENVS/ddad/bin/python}"
+PY_DDAD="${PY_DDAD:-$(command -v python)}"           # EfficientAD and DDAD run in the LACToS environment (the current interpreter)
 for py in "$PY_PATCHCORE" "$PY_SIMPLENET" "$PY_SSN" "$PY_DDAD"; do
   [ -x "$py" ] || { echo "interpreter not found: $py (see environment/ and the header of this script)"; exit 2; }
 done
@@ -33,7 +33,7 @@ LIM=""; [ -n "${LIMIT:-}" ] && LIM="--limit $LIMIT"
 run() {  # python method bench [extra]
   local py=$1 m=$2 b=$3; shift 3
   echo "[$(date '+%F %T')] $b/$m"
-  CUDA_VISIBLE_DEVICES=$GPU OMP_NUM_THREADS=4 "$py" baselines/infer_feature.py --method $m --bench $b --out_root "$B" $LIM "$@" > "$LOG/baseline_${b}_$m.log" 2>&1
+  CUDA_VISIBLE_DEVICES=$GPU OMP_NUM_THREADS=4 "$py" baselines/infer_feature.py --method $m --bench $b --out_root "$B" $LIM "$@" > "$LOG/baseline_${b}_$m.log" 2>&1 || { echo "  FAILED, see $LOG/baseline_${b}_$m.log"; exit 1; }
 }
 run_bench() {
   local b=$1 pad="" w
@@ -44,7 +44,7 @@ run_bench() {
   run "$PY_SSN" supersimplenet $b
   run "$PY_DDAD" efficientad $b $pad
   echo "[$(date '+%F %T')] $b/ddad (w=$w, T=250, skip=25, eta=1)"
-  CUDA_VISIBLE_DEVICES=$GPU OMP_NUM_THREADS=4 "$PY_DDAD" baselines/infer_ddad.py --bench $b --w $w --T 250 --skip 25 --eta 1 --out_root "$B" $LIM > "$LOG/baseline_${b}_ddad.log" 2>&1
+  CUDA_VISIBLE_DEVICES=$GPU OMP_NUM_THREADS=4 "$PY_DDAD" baselines/infer_ddad.py --bench $b --w $w --T 250 --skip 25 --eta 1 --out_root "$B" $LIM > "$LOG/baseline_${b}_ddad.log" 2>&1 || { echo "  FAILED, see $LOG/baseline_${b}_ddad.log"; exit 1; }
 }
 BENCHES=("$@"); [ ${#BENCHES[@]} -eq 0 ] && BENCHES=(ffhq ct xray)
 for b in "${BENCHES[@]}"; do run_bench $b; done

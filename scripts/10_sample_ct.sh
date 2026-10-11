@@ -9,9 +9,9 @@
 #
 # Paper setting (Table 5): identity forward model y = x + sigma n, sigma = 0.1, DPS scale 0.4
 # (zeta' = 0.2 in the normalised step), 1000 DDPM steps, CT guided-diffusion prior
-# (assets/checkpoints/diffusion/ct_model050000.pt). The paper's M = 5 draws are the first
-# 5 of a 10-draw run; draws are seeded per (image, draw index), so --num_measurements 5
-# reproduces them.
+# (assets/checkpoints/diffusion/ct_model050000.pt), 5 draws. NOTE: this sampler seeds only the
+# measurement noise and x_T per (image, draw); the reverse-step noise is not seeded, so a re-run
+# gives new posterior draws, not the shipped ones (sampling/README.md, "Determinism").
 set -euo pipefail
 source "$(dirname "$0")/common.sh"
 DRAWS="${DRAWS:-5}"; SHARD="${SHARD:-0}"; NSHARDS="${NSHARDS:-1}"
@@ -25,8 +25,9 @@ for sub in "${SETS[@]}"; do
       --diffusion_config configs/diffusion_config.yaml --task_config configs/ctgrid/sigma0.1.yaml \
       --data_root "$ROOT/assets/data/CT/test/$sub" --save_dir "$RAW/CT_$sub" \
       --num_measurements "$DRAWS" --batch 16 --scale 0.4 --grad_norm per_sample --seed 3 \
-      --shard "$SHARD" --num_shards "$NSHARDS" $IMG ) 2>&1 | tee "$OUT/logs/sample_CT_${sub}_shard$SHARD.log" | grep -v "^\[.*done |" || true
-  # the ctn images are already named image_6XXX in the bundle, so no id offset is needed
+      --start 0 --end 99999 --shard "$SHARD" --num_shards "$NSHARDS" $IMG ) 2>&1 | tee "$OUT/logs/sample_CT_${sub}_shard$SHARD.log" | { grep -v "^\[.*done |" || [ $? -eq 1 ]; }
+  # the ctn images are already named image_6XXX in the bundle, so no id offset is needed (the sampler's
+  # default index filter 0..99 is widened above so that these ids are not dropped)
   python sampling/wire_recons.py --src "$RAW/CT_$sub" --dst "$OUT/recons_mine/results_patches_ddad_native_CT_$sub" --n_draws "$DRAWS"
 done
 echo "done. Score them with:  RECON_ROOT=$OUT/recons_mine GPU=$GPU bash scripts/20_score_lactos.sh CT"

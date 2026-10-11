@@ -1,5 +1,4 @@
-# DDAD faces detection config (E1-faces: reproduce DDAD baseline on faces).
-# Usage: cd DDAD && python main.py --config config_faces.yaml --detection True
+# DDAD settings for baselines/infer_ddad.py (w, T, skip, eta, feature extractor are overridden per run).
 
 data:
   name: MVTec

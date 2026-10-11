@@ -40,6 +40,11 @@ def to256(m):
 # ------------------------------------------------------------------ loaders
 def load_patchcore(bench, dev):
     sys.path.insert(0, C.UPSTREAM["patchcore"])
+    try:
+        import faiss  # noqa: F401  (needed to read the memory bank)
+    except ImportError:
+        raise SystemExit("PatchCore needs faiss: run this under the 'patchcore' environment (environment/patchcore.txt) "
+                         "or set PY_PATCHCORE to an interpreter that has it")
     import patchcore.patchcore, patchcore.common, patchcore.backbones
     path = C.CKPT["patchcore"][bench]
     params = pickle.load(open(os.path.join(path, "patchcore_params.pkl"), "rb"))
@@ -167,6 +172,8 @@ def main():
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--nopad", action="store_true", help="EfficientAD: skip the 4-px pad (as the lab's CT/X-ray scripts); setting 'nopad'")
     a = ap.parse_args()
+    if a.nopad and a.method != "efficientad":
+        ap.error("--nopad applies to --method efficientad only")
     torch.manual_seed(0)
     dev = torch.device(a.device)
     items = C.list_images(a.bench)

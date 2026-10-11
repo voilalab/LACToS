@@ -26,8 +26,10 @@ trace a file back; a user of the bundle needs none of them.
 | `results_patches_ddad_native_xray_xrsc` / `_xrgd` | same sampler, σ = 2.0, scale 1.0 (ζ′ = 0.5) | `xray_model500000.pt` | 20 | `dps_ct_bundle/outputs/XRAY_{scissors,good}_zeta0.5_sigma2.0_M20` |
 | `results_patches_adm_dps_{faces,moreface,faces_normal}` | `sampling/generate_recons.py` (additive_dps), σ = 0.01, scale 0.1, skip 1, 1000 steps | `ffhq_10m.pt` (DPS2022 release) | 20 | lab `results_patches_adm_dps_*` |
 
-`sample_fast.py` seeds each (image, draw) pair independently (seed·1000003 + index·1009 + k), so a
-5-draw run reproduces the first 5 draws of the 10-draw run.
+`sample_fast.py` seeds the measurement noise and x_T of each (image, draw) pair independently
+(seed·1000003 + index·1009 + k) but not the reverse-step noise, so a re-run yields new posterior
+draws; the shipped 5 CT draws are the first 5 of the lab's 10-draw run (same per-draw seeds, same
+process). The renamed normal slices (image_6000+i) would get different per-draw seeds than the lab run.
 
 ## Checkpoints (`assets/checkpoints/`)
 

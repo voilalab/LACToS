@@ -7,3 +7,5 @@ __pycache__/
 
 # upstream baseline code is fetched by scripts/fetch_third_party.sh
 third_party/*/
+# the extracted asset bundle (or a symlink to it) lives here and is never committed
+/assets

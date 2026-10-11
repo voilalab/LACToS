@@ -27,7 +27,7 @@ run_CT() {
     CUDA_VISIBLE_DEVICES=$GPU $SEEDED evaluate.py --config configs/lactos_ct.yaml --category CT --subcategory $sub \
       --results_root "$RC/results_patches_ddad_native" --image_dir "assets/data/CT/test/$sub" --figures_dir "$F/CT" \
       --autoencoder_path "$AE/ae_CT.pth" --ae_encode folded --bins_rgb 16 --bins_pca 64 --smooth_sigma 0.5 --superpixel_target_size 100 \
-      $COMMON --dump_maps "$M/CT/sp100_m5_hs0.5_b16x64/$sub" --output_dir "$J/CT/$sub" > "$LOG/lactos_CT_$sub.log" 2>&1
+      $COMMON --dump_maps "$M/CT/sp100_m5_hs0.5_b16x64/$sub" --output_dir "$J/CT/$sub" > "$LOG/lactos_CT_$sub.log" 2>&1 || { echo "  FAILED, see $LOG/lactos_CT_$sub.log"; exit 1; }
   done
 }
 run_xray() {
@@ -37,7 +37,7 @@ run_xray() {
     $SEEDED embedder/evaluate_ddad_fe.py --config configs/lactos_xray.yaml --category xray --subcategory $sub \
       --results_root "$RC/results_patches_ddad_native" --gt_root assets/data/xray/ground_truth --image_dir "assets/data/xray/test/$sub" --figures_dir "$F/xray" \
       --autoencoder_path "$AE/ae_xray.pth" --bins_rgb 16 --bins_pca 16 --smooth_sigma 0 --superpixel_target_size 10 --no_pca \
-      $COMMON --dump_maps "$M/xray/sp10_m20_hs0_rgbonly_b16/$sub" --output_dir "$J/xray/$sub" > "$LOG/lactos_xray_$sub.log" 2>&1
+      $COMMON --dump_maps "$M/xray/sp10_m20_hs0_rgbonly_b16/$sub" --output_dir "$J/xray/$sub" > "$LOG/lactos_xray_$sub.log" 2>&1 || { echo "  FAILED, see $LOG/lactos_xray_$sub.log"; exit 1; }
   done
 }
 run_ffhq() {
@@ -49,7 +49,7 @@ run_ffhq() {
       CUDA_VISIBLE_DEVICES=$GPU $SEEDED evaluate.py --config configs/lactos_ffhq_$set.yaml --category faces --subcategory random \
         --results_dir "$RC/results_patches_adm_dps_$set" --gt_root "assets/data/ffhq/$set/ground_truth" --image_dir "assets/data/ffhq/$set/test" --figures_dir "$F/ffhq_$set" \
         --autoencoder_path "$AE/ae_faces.pth" --bins_rgb 16 --bins_pca 32 --smooth_sigma 1 --superpixel_target_size 20 $extra \
-        $COMMON --dump_maps "$M/ffhq/$tag/$set" --output_dir "$J/ffhq/$set" > "$LOG/lactos_ffhq_${set}_$variant.log" 2>&1
+        $COMMON --dump_maps "$M/ffhq/$tag/$set" --output_dir "$J/ffhq/$set" > "$LOG/lactos_ffhq_${set}_$variant.log" 2>&1 || { echo "  FAILED, see $LOG/lactos_ffhq_${set}_$variant.log"; exit 1; }
     done
   done
 }

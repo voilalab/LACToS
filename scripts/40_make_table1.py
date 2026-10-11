@@ -20,6 +20,8 @@ from scipy.ndimage import gaussian_filter
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 from full_metric_table import full_metrics            # noqa: E402
+sys.path.insert(0, os.path.join(ROOT, "baselines"))
+from compose import pub_map                           # noqa: E402
 
 OUT = os.environ.get("OUT", os.path.join(ROOT, "results"))
 LMAPS = os.path.join(OUT, "lactos_maps")
@@ -50,8 +52,9 @@ BASELINE = {
 
 
 def _load_dumps(bench, tag, sets):
-    files = [f for s in sets for f in sorted(glob.glob(os.path.join(LMAPS, bench, tag, s, "samples_*.npz")))]
-    return [np.load(f) for f in files]
+    """{'<set>/<file>': npz} for every dump of the tag, keyed so that two tags can be paired by image."""
+    return {f"{s}/{os.path.basename(f)}": np.load(f)
+            for s in sets for f in sorted(glob.glob(os.path.join(LMAPS, bench, tag, s, "samples_*.npz")))}
 
 
 def _valid(z):
@@ -68,15 +71,18 @@ def lactos_cell(bench):
     base = full if full is not None else rgb
     if not base:
         return None
-    n = len(base)
-    if n != N_IMAGES[bench]:
-        print(f"  [warn] {bench}: {n} LACToS dumps, expected {N_IMAGES[bench]} (run scripts/20_score_lactos.sh {bench})")
+    if full is not None and rgb is not None and set(full) != set(rgb):
+        print(f"  [incomplete] {bench}: the full and the RGB-only runs cover different images "
+              f"({len(full)} vs {len(rgb)}); re-run scripts/20_score_lactos.sh {bench}")
+        return "incomplete"
+    if len(base) != N_IMAGES[bench]:
+        print(f"  [incomplete] {bench}: {len(base)} LACToS dumps, expected {N_IMAGES[bench]} (run scripts/20_score_lactos.sh {bench})")
+        return "incomplete"
     maps, gts, valids = [], [], []
-    for i in range(n):
-        z = base[i]
+    for key, z in base.items():
         d = np.nan_to_num(z["delta_map"].astype(np.float64))
         if full is not None and rgb is not None:
-            r = np.nan_to_num(rgb[i]["delta_map"].astype(np.float64))
+            r = np.nan_to_num(rgb[key]["delta_map"].astype(np.float64))
             d = r + op["lam"] * (d - r)
         d = d.astype(np.float32)
         maps.append(gaussian_filter(d, op["sigma"], mode="nearest") if op["sigma"] > 0 else d)
@@ -86,15 +92,14 @@ def lactos_cell(bench):
 
 
 def baseline_cell(bench, method):
-    sys.path.insert(0, os.path.join(ROOT, "baselines"))
-    from compose import pub_map                     # noqa: E402
     setting, knob = BASELINE[method][bench]
     bench_dir = bench.lower()                       # baselines/table1_common.py names the benchmarks ffhq / ct / xray
     files = sorted(glob.glob(os.path.join(BMAPS, bench_dir, method, setting, "*.npz")))
     if not files:
         return None
     if len(files) != N_IMAGES[bench]:
-        print(f"  [warn] {bench}/{method}: {len(files)} maps, expected {N_IMAGES[bench]} (run scripts/30_run_baselines.sh {bench})")
+        print(f"  [incomplete] {bench}/{method}: {len(files)} maps, expected {N_IMAGES[bench]} (run scripts/30_run_baselines.sh {bench_dir})")
+        return "incomplete"
     maps, gts, valids = [], [], []
     for f in files:
         z = dict(np.load(f))
@@ -110,12 +115,15 @@ def main():
     a = ap.parse_args()
     methods = [m for m in METHODS if a.only == "all" or (m == "lactos") == (a.only == "lactos")]
     table = {b: {} for b in BENCHES}
+    incomplete = []
     for b in BENCHES:
         for m in methods:
             print(f"{NAMES[b]:7s} {LABELS[m]:15s}", end=" ", flush=True)
             cell = lactos_cell(b) if m == "lactos" else baseline_cell(b, m)
             if cell is None:
                 print("(no maps)"); continue
+            if cell == "incomplete":
+                incomplete.append(f"{NAMES[b]}/{LABELS[m]}"); continue
             table[b][m] = cell
             print("AUROC %.4f  AP %.4f  AUPRO %.4f" % tuple(cell))
     os.makedirs(OUT, exist_ok=True)
@@ -134,6 +142,8 @@ def main():
                 rows.append(f"| {NAMES[b]} | {LABELS[m]} | {met} | {ours:.4f} | {ref:.4f} | {ours - ref:+.4f} | {'ok' if ok else 'DIFF'} |")
     md = ["# Table 1 (reproduced) vs paper", "", "| Dataset | Method | Metric | reproduced | paper | delta | |", "|---|---|---|---:|---:|---:|---|"] + rows
     md += ["", f"{n_cells - n_bad}/{n_cells} cells agree at 4 decimals."]
+    if incomplete:
+        md += ["", "Incomplete (not compared): " + ", ".join(incomplete)]
     open(os.path.join(OUT, "table1.md"), "w").write("\n".join(md) + "\n")
 
     # LaTeX body in the paper's layout (methods as columns)
@@ -152,8 +162,9 @@ def main():
 
     print("\n" + "\n".join(md[2:]))
     print(f"\nwrote {OUT}/table1.{{json,md,tex}}")
-    print("PASS" if n_bad == 0 and n_cells else f"FAIL: {n_bad} cell(s) differ from the paper")
-    sys.exit(0 if n_bad == 0 and n_cells else 1)
+    ok = n_bad == 0 and n_cells > 0 and not incomplete
+    print("PASS" if ok else f"FAIL: {n_bad} cell(s) differ from the paper" + (f"; incomplete: {', '.join(incomplete)}" if incomplete else ""))
+    sys.exit(0 if ok else 1)
 
 
 if __name__ == "__main__":
