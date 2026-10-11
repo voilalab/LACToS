@@ -31,7 +31,7 @@ torch 2.0.1+cu118, torchvision 0.15.2, scikit-image 0.19.2, scikit-learn 1.2.2, 
 * `--ae_encode direct` on CHAOS gives AUROC 0.9620 / AP 0.4318 / AUPRO 0.8765 instead of 0.8764.
 * Stage 1 (re-sampling): FFHQ reproduces the shipped reconstructions; CHAOS / DVXray give new draws.
 
-## 2026-10-10 — clean-clone verification (commit b7f25fc)
+## 2026-10-10 — clean-clone verification (commit fa7ab56, the trimmed branch)
 
 `git clone -b release/lactos-table1` into an empty directory (no `assets` entry in the tree), then with
 `ASSETS=/path/to/LACToS_table1_assets` exported and nothing else from the lab reachable through the
@@ -44,7 +44,7 @@ GPU=0 bash scripts/20_score_lactos.sh CT & GPU=1 ... xray & GPU=2 ... ffhq & GPU
 python scripts/40_make_table1.py
 ```
 
-Result after 42 minutes of wall time on four RTX A6000s:
+Result after 41 minutes of wall time on four RTX A6000s (an earlier identical run on commit b7f25fc, before the final trim, also passed):
 
 ```
 63/63 cells agree at 4 decimals.   PASS
