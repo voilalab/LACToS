@@ -16,7 +16,7 @@ the files the paper's numbers were computed from; not part of this branch):
 |---|---|---|
 | LACToS dump check | LACToS delta maps of the first 2 images of every set vs the lab dumps | CT, X-ray, FFHQ: max abs diff <= 1e-4 (CT needs `--ae_encode folded`) |
 | baseline map check | published-blur maps of all 6 baselines, 2 images per set, vs the lab raw maps | r = 1.000000 and max diff 0 for all methods, except PatchCore max diff 2e-5 (GPU k-NN vs CPU faiss) |
-| sampler smoke tests (1 image, 1 draw) | `scripts/10_sample_*.sh` run end to end | FFHQ draw = shipped draw up to 1 gray level; CHAOS / DVXray draws differ (unseeded reverse-step noise, see `sampling/README.md`) |
+| sampler smoke tests (2 images, 2 draws, 2 GPUs) | `scripts/10_sample_*.sh`, then `RECON_ROOT=... scripts/20_score_lactos.sh` and `scripts/15_pack_bundle.sh` | all run end to end; FFHQ draws equal the bundled ones up to 1 gray level; CHAOS / DVXray draws differ (unseeded reverse-step noise, see `sampling/README.md`) |
 
 Hardware / software of the run: NVIDIA RTX A6000 (48 GB), CUDA 11.8 driver stack, Python 3.10.20,
 torch 2.0.1+cu118, torchvision 0.15.2, scikit-image 0.19.2, scikit-learn 1.2.2, scipy 1.10.1
@@ -24,12 +24,15 @@ torch 2.0.1+cu118, torchvision 0.15.2, scikit-image 0.19.2, scikit-learn 1.2.2, 
 
 ## What is deterministic and what is not
 
-* Stages 2-4 from the shipped reconstructions are deterministic up to GPU floating point: two runs on
-  the same GPU model give identical dumps; a different GPU or torch build can move a few histogram
-  bins (the same effect as `--ae_encode`, i.e. fourth-decimal changes). Report the table your run
-  produces together with `results/table1.md`'s diff.
-* `--ae_encode direct` on CHAOS gives AUROC 0.9620 / AP 0.4318 / AUPRO 0.8765 instead of 0.8764.
-* Stage 1 (re-sampling): FFHQ reproduces the shipped reconstructions; CHAOS / DVXray give new draws.
+* Stages 2-4 from the bundled reconstructions are deterministic on a given machine: two runs on the
+  same GPU model give identical dumps. Other hardware changes float32 round-off, which moves a few
+  values across histogram-bin edges. Measured for the CHAOS LACToS cell (0.9620 / 0.4318 / 0.8764 on
+  an RTX A6000): 0.9616 / 0.4295 / 0.8751 when scored on CPU (`evaluate.py --device cpu`), and
+  0.9620 / 0.4318 / 0.8765 with `--ae_encode direct`. Report the table your run produces together
+  with the diff in `results/table1.md`.
+* Stage 1 (sampling): FFHQ reproduces the bundled reconstructions up to PNG rounding; CHAOS and
+  DVXray give new posterior draws on every run, which changes their LACToS cells in the second to
+  third decimal (table in `sampling/README.md`).
 
 ## 2026-10-10 — clean-clone verification (commit fa7ab56, the trimmed branch)
 

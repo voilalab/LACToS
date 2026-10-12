@@ -118,8 +118,11 @@ def run(cfg: Dict[str, Any]) -> None:
     out_root = Path(cfg["out_root"])
     image_dir = Path(cfg["image_dir"])
     samples = [str(s) for s in cfg["samples"]]
+    # one process per GPU: each takes every num_shards-th image; the metadata below lists the whole set
+    work = samples[int(cfg.get("shard", 0))::int(cfg.get("num_shards", 1))]
+    print(f"[shard]        {cfg.get('shard', 0)}/{cfg.get('num_shards', 1)}: {len(work)} of {len(samples)} images")
 
-    for sid in samples:
+    for sid in work:
         img_path = image_dir / f"{sid}.png"
         if not img_path.exists():
             print(f"MISSING: {img_path}")
@@ -206,6 +209,8 @@ def main():
     p.add_argument("--test_origin", type=str, default=None,
                    help="Override sampler's default output dirname segment.")
     p.add_argument("--bottom_suffix", type=str, default=None)
+    p.add_argument("--shard", type=int, default=0, help="process images shard::num_shards of the sample list")
+    p.add_argument("--num_shards", type=int, default=1, help="number of parallel runs sharing the sample list (one per GPU)")
     args = p.parse_args()
 
     cfg = _resolve_config(args)
@@ -215,6 +220,9 @@ def main():
     if missing:
         p.error(f"missing required config fields: {missing}")
 
+    if not 0 <= args.shard < args.num_shards:
+        p.error("--shard must satisfy 0 <= shard < num_shards")
+    cfg["shard"], cfg["num_shards"] = args.shard, args.num_shards
     run(cfg)
 
 

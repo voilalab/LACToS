@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Check an extracted LACToS Table-1 asset bundle: layout, sample/draw counts, SHA-256.
 
-  python tools/check_bundle.py ASSETS_DIR [--no-sha]
+  python tools/check_bundle.py ASSETS_DIR [--no-sha] [--write-sha]
 
 Exit code 0 = complete bundle. Prints every missing or mismatching item.
 """
@@ -37,6 +37,30 @@ EXPECTED_DATA_COUNTS = {  # dir : (n_png, suffix)
     "data/ffhq/moreface/test": 28, "data/ffhq/moreface/ground_truth": 28,
     "data/ffhq/faces_normal/test": 50, "data/ffhq/faces_normal/ground_truth": 50,
 }
+
+
+def sha256_file(path, chunk=1 << 22):
+    h = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for block in iter(lambda: fh.read(chunk), b""):
+            h.update(block)
+    return h.hexdigest()
+
+
+def write_sha(root):
+    """(Re)write SHA256SUMS for every file under root. Use after changing a bundle, e.g. after
+    replacing recons/ with reconstructions you sampled yourself (scripts/15_pack_bundle.sh does this)."""
+    rows = []
+    for d, _, files in os.walk(root):
+        for f in files:
+            rel = os.path.relpath(os.path.join(d, f), root)
+            if rel != "SHA256SUMS":
+                rows.append((rel, sha256_file(os.path.join(d, f))))
+    rows.sort()
+    with open(os.path.join(root, "SHA256SUMS"), "w") as fh:
+        for rel, h in rows:
+            fh.write(f"{h}  {rel}\n")
+    print(f"wrote SHA256SUMS ({len(rows)} files)")
 
 
 def recon_problems(root):
@@ -94,7 +118,7 @@ def sha_problems(root):
         p = os.path.join(root, rel)
         if not os.path.exists(p):
             out.append(f"listed file missing: {rel}"); continue
-        if hashlib.sha256(open(p, "rb").read()).hexdigest() != h:
+        if sha256_file(p) != h:
             out.append(f"sha256 mismatch: {rel}")
     return out
 
@@ -102,9 +126,12 @@ def sha_problems(root):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("assets")
-    ap.add_argument("--no-sha", action="store_true", help="skip the SHA-256 pass (slow on 10 GB)")
+    ap.add_argument("--no-sha", action="store_true", help="skip the SHA-256 pass (slow on 6 GB)")
+    ap.add_argument("--write-sha", action="store_true", help="(re)write SHA256SUMS first, then check")
     a = ap.parse_args()
     root = a.assets
+    if a.write_sha:
+        write_sha(root)
     problems = [f"missing file {f}" for f in EXPECTED_FILES if not os.path.exists(os.path.join(root, f))]
     problems += data_problems(root) + recon_problems(root)
     if not a.no_sha:

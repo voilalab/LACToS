@@ -32,9 +32,9 @@ diff against `expected/table1.json`. `docs/REPRODUCIBILITY.md` records the verif
 | Folder | Contents | Size |
 |---|---|---:|
 | `checkpoints/lactos/` | the three per-dataset pixel autoencoders (ResNet-101 features → 3 dims) and the DDAD-fine-tuned ResNet-101 used for DVXray | 0.2 GB |
-| `checkpoints/diffusion/` | the three unconditional diffusion priors (CHAOS, DVXray, FFHQ); only needed to **re-sample** | 0.9 GB |
+| `checkpoints/diffusion/` | the three unconditional diffusion priors (CHAOS, DVXray, FFHQ); used by stage 1 (sampling) | 0.9 GB |
 | `checkpoints/baselines/{ffhq,ct,xray}/` | PatchCore memory banks, SimpleNet / SuperSimpleNet / GLASS / EfficientAD weights, DDAD UNets | 4.7 GB |
-| `recons/` | the DPS reconstructions the paper scored: CHAOS 5 draws, DVXray 20 draws, FFHQ 20 seeds per test image | 0.5 GB |
+| `recons/` | the DPS reconstructions the paper scored (the output of stage 1): CHAOS 5 draws, DVXray 20 draws, FFHQ 20 seeds per test image | 0.5 GB |
 | `data/` | test images, ground-truth masks, CT body masks, the 20-image tuning subsets | 40 MB |
 | `SHA256SUMS` | checksum of every file | |
 
@@ -43,13 +43,13 @@ Layout and provenance of every file: `docs/BUNDLE.md`, `docs/PROVENANCE.md`.
 ## Setup
 
 ```bash
-git clone <URL of this repository> LACToS && cd LACToS
+git clone https://github.com/voilalab/LACToS.git && cd LACToS
 tar xf /path/to/LACToS_table1_assets.tar            # -> LACToS_table1_assets/
 ln -s $PWD/../LACToS_table1_assets assets           # or: export ASSETS=/path/to/LACToS_table1_assets
 
 conda create -n lactos python=3.10 && conda activate lactos
 pip install torch==2.0.1 torchvision==0.15.2 --index-url https://download.pytorch.org/whl/cu118   # the reference build
-pip install -r requirements.txt                     # numpy, scipy, scikit-image, scikit-learn, pillow, pyyaml, omegaconf, kornia, pytest
+pip install -r requirements.txt                     # numpy, scipy, scikit-image, scikit-learn, pillow, pyyaml, omegaconf, kornia, tqdm
 bash scripts/00_check_assets.sh                     # verifies every file against SHA256SUMS
 ```
 
@@ -58,13 +58,16 @@ The exact environments the numbers were produced with are exported in `environme
 
 ## Reproduce Table 1: the scripts, in order
 
-| Stage | Script | What it does | Needs | Time (1 GPU) |
+| Stage | Script | What it does | Needs | Time |
 |---|---|---|---|---|
 | 0 | `scripts/00_check_assets.sh` | checks the bundle (layout, counts, SHA-256) | bundle | 1 min |
-| 1 | `scripts/10_sample_{ct,xray,ffhq}.sh` | **optional**: re-sample the DPS reconstructions | diffusion priors | ~2 / ~4 / ~8 GPU-h |
-| 2 | `scripts/20_score_lactos.sh` | LACToS scoring at the paper's operating points → per-image delta maps | recons, AEs | ~1 h |
-| 3 | `scripts/30_run_baselines.sh` | the six baselines at the paper's settings → per-image raw maps | baseline ckpts, 4 envs | ~1.5 h |
+| 1 | `scripts/10_sample_{ct,xray,ffhq}.sh` | samples the DPS reconstructions (already in the bundle as `recons/`) | diffusion priors, test images | 7 + 22 + 16 GPU-h |
+| 1b | `scripts/15_pack_bundle.sh` | packs sampled reconstructions into a bundle for upload | stage 1 | minutes |
+| 2 | `scripts/20_score_lactos.sh` | LACToS scoring at the paper's operating points → per-image delta maps | recons, AEs | ~1 GPU-h |
+| 3 | `scripts/30_run_baselines.sh` | the six baselines at the paper's settings → per-image raw maps | baseline ckpts, 4 envs | ~1.5 GPU-h |
 | 4 | `scripts/40_make_table1.py` | pool, blur, metrics; writes `results/table1.{json,md,tex}` and diffs against the paper | stages 2+3 | 5 min |
+
+With the bundle, stages 2–4 reproduce every cell (stage 1 can be skipped, its output is `recons/`):
 
 ```bash
 GPU=0 bash scripts/20_score_lactos.sh                 # or one benchmark: CT | xray | ffhq
@@ -72,10 +75,42 @@ GPU=0 bash scripts/30_run_baselines.sh                # or one benchmark: ffhq |
 python scripts/40_make_table1.py                      # --only lactos | --only baselines
 ```
 
-Stage 1 is not needed to reproduce the table: the reconstructions the paper scored are included in
-the bundle (`recons/`), and stages 2–4 reproduce every cell from them. It is there so that the full pipeline (diffusion prior → DPS
-reconstructions → LACToS) can be re-run; `sampling/README.md` explains the samplers and
-how to score your own reconstructions (`RECON_ROOT=results/recons_mine`).
+### Stage 1: sampling the reconstructions
+
+These commands produce the reconstructions that stage 2 scores, i.e. the `recons/` folder of the
+bundle. They need only `checkpoints/diffusion/` and `data/` from the bundle. Each script runs one
+process per listed GPU and resumes where it stopped.
+
+```bash
+GPUS="0 1 2 3" bash scripts/10_sample_ct.sh       # CHAOS   200 slices x  5 draws = 1,000 reconstructions (~7 GPU-h)
+GPUS="0 1 2 3" bash scripts/10_sample_xray.sh     # DVXray  144 images x 20 draws = 2,880 reconstructions (~22 GPU-h)
+GPUS="0 1 2 3" bash scripts/10_sample_ffhq.sh     # FFHQ    100 faces  x 20 seeds = 2,000 reconstructions (~16 GPU-h)
+#  -> results/recons_mine/results_patches_*/      same directory names and layout as recons/ in the bundle
+```
+
+Then either score them in place, or pack them into a bundle (the directory that is archived and
+uploaded):
+
+```bash
+# score in place (a separate OUT keeps the results of the bundled reconstructions untouched)
+OUT=results_mine RECON_ROOT=results/recons_mine GPU=0 bash scripts/20_score_lactos.sh
+OUT=results_mine python scripts/40_make_table1.py --only lactos
+
+# pack: checkpoints/ + data/ from the current bundle, recons/ from results/recons_mine, new SHA256SUMS
+bash scripts/15_pack_bundle.sh /path/to/LACToS_table1_assets_new
+tar -cf LACToS_table1_assets_new.tar -C /path/to LACToS_table1_assets_new
+```
+
+What to expect from re-sampled reconstructions (`sampling/README.md` has the details):
+
+* **FFHQ** is seeded per draw and reproduces the bundled images up to PNG rounding (at most one
+  gray level, on about 1 % of the pixels), so the FFHQ row is unchanged.
+* **CHAOS and DVXray** give new posterior draws on every run, because the sampler does not seed the
+  noise of the reverse steps. The LACToS cells then differ from the paper and stage 4 reports them
+  as `DIFF`. Measured with alternative draws of the same sampler: for CHAOS a different set of
+  5 draws changed AUROC / AP / AUPRO by +0.0005 / −0.021 / −0.009; for DVXray two disjoint sets of
+  10 draws differed by 0.0004 / 0.0011 / 0.0024. The bundled reconstructions are the ones behind
+  the published numbers.
 
 Stage 3 needs the official implementations of PatchCore, SimpleNet, GLASS and SuperSimpleNet
 (`bash scripts/fetch_third_party.sh` clones them at the commits we used) and their environments
@@ -85,10 +120,12 @@ interpreter that runs the script (your `lactos` env); point the script at the ot
 `PY_PATCHCORE=... PY_SIMPLENET=... PY_SSN=...` or `CONDA_ENVS=/path/to/conda/envs` (the env names
 `patchcore`, `simplenet`, `ssn_env`).
 
-All scripts take `GPU=<index>`, `OUT=<results dir>` and `ASSETS=<bundle dir>`; stages 2 and 3
-are resumable per benchmark and can run in parallel on different GPUs. Outputs:
+All scripts take `GPU=<index>`, `OUT=<results dir>` and `ASSETS=<bundle dir>`; the stage-1 scripts
+also take `GPUS="<i> <j> ..."`. Stages 2 and 3 can run in parallel on different GPUs, one benchmark
+per GPU. Outputs:
 
 ```
+results/recons_mine/results_patches_*/                       stage 1: reconstructions (PNG), bundle layout
 results/lactos_maps/<bench>/<tag>/<set>/samples_<id>.npz     stage 2: delta_map, gt_mask, valid_mask per image
 results/baseline_maps/<bench>/<method>/<setting>/<set>__<id>.npz   stage 3: raw quantities per image
 results/table1.{json,md,tex}                                  stage 4
@@ -141,7 +178,7 @@ results/table1.{json,md,tex}                                  stage 4
 ## Repository layout
 
 ```
-scripts/            00_check_assets.sh  10_sample_*.sh  20_score_lactos.sh  30_run_baselines.sh  40_make_table1.py  fetch_third_party.sh
+scripts/            00_check_assets.sh  10_sample_*.sh  15_pack_bundle.sh  20_score_lactos.sh  30_run_baselines.sh  40_make_table1.py  fetch_third_party.sh
 evaluate.py         LACToS scorer (reconstructions -> superpixels -> typicality -> delta map)
 ood/                data loading, superpixels, ResNet pixel embeddings, typical-set scoring, samplers (DPS for FFHQ)
 embedder/           evaluate_ddad_fe.py: scorer variant that loads the fine-tuned DVXray backbone
