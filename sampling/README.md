@@ -5,13 +5,12 @@ sampling (DPS) under the identity forward model y = x + σn. The asset bundle co
 reconstructions the paper scored (`recons/`); the scripts here are how they are produced.
 
 ```bash
-GPUS="0 1 2 3" bash scripts/10_sample_ct.sh       # CHAOS   200 slices x  5 draws = 1,000 reconstructions (~7 GPU-h)
-GPUS="0 1 2 3" bash scripts/10_sample_xray.sh     # DVXray  144 images x 20 draws = 2,880 reconstructions (~22 GPU-h)
-GPUS="0 1 2 3" bash scripts/10_sample_ffhq.sh     # FFHQ    100 faces  x 20 seeds = 2,000 reconstructions (~16 GPU-h)
+GPUS="0 1 2 3" bash scripts/10_sample_ct.sh       # CHAOS   200 slices x  5 draws = 1,000 reconstructions
+GPUS="0 1 2 3" bash scripts/10_sample_xray.sh     # DVXray  144 images x 20 draws = 2,880 reconstructions
+GPUS="0 1 2 3" bash scripts/10_sample_ffhq.sh     # FFHQ    100 faces  x 20 seeds = 2,000 reconstructions
 ```
 
-One reconstruction takes 25–30 s on an RTX A6000 (1000 reverse steps with a gradient through the
-UNet at each step). Every script starts one process per GPU in `GPUS` (or uses `GPU=<index>`),
+Every script starts one process per GPU in `GPUS` (or uses `GPU=<index>`),
 writes one log per process to `results/logs/sample_*_shard<i>.log`, and resumes when re-run:
 reconstructions already on disk are skipped. A set can be named to run it alone
 (`scripts/10_sample_ct.sh cta`, `... xray.sh xrgd`, `... ffhq.sh faces_normal`). Smoke tests:

@@ -61,7 +61,7 @@ The exact environments the numbers were produced with are exported in `environme
 | Stage | Script | What it does | Needs | Time |
 |---|---|---|---|---|
 | 0 | `scripts/00_check_assets.sh` | checks the bundle (layout, counts, SHA-256) | bundle | 1 min |
-| 1 | `scripts/10_sample_{ct,xray,ffhq}.sh` | samples the DPS reconstructions (already in the bundle as `recons/`) | diffusion priors, test images | 7 + 22 + 16 GPU-h |
+| 1 | `scripts/10_sample_{ct,xray,ffhq}.sh` | samples the DPS reconstructions (already in the bundle as `recons/`) | diffusion priors, test images | |
 | 1b | `scripts/15_pack_bundle.sh` | packs sampled reconstructions into a bundle for upload | stage 1 | minutes |
 | 2 | `scripts/20_score_lactos.sh` | LACToS scoring at the paper's operating points → per-image delta maps | recons, AEs | ~1 GPU-h |
 | 3 | `scripts/30_run_baselines.sh` | the six baselines at the paper's settings → per-image raw maps | baseline ckpts, 4 envs | ~1.5 GPU-h |
@@ -82,9 +82,9 @@ bundle. They need only `checkpoints/diffusion/` and `data/` from the bundle. Eac
 process per listed GPU and resumes where it stopped.
 
 ```bash
-GPUS="0 1 2 3" bash scripts/10_sample_ct.sh       # CHAOS   200 slices x  5 draws = 1,000 reconstructions (~7 GPU-h)
-GPUS="0 1 2 3" bash scripts/10_sample_xray.sh     # DVXray  144 images x 20 draws = 2,880 reconstructions (~22 GPU-h)
-GPUS="0 1 2 3" bash scripts/10_sample_ffhq.sh     # FFHQ    100 faces  x 20 seeds = 2,000 reconstructions (~16 GPU-h)
+GPUS="0 1 2 3" bash scripts/10_sample_ct.sh       # CHAOS   200 slices x  5 draws = 1,000 reconstructions
+GPUS="0 1 2 3" bash scripts/10_sample_xray.sh     # DVXray  144 images x 20 draws = 2,880 reconstructions
+GPUS="0 1 2 3" bash scripts/10_sample_ffhq.sh     # FFHQ    100 faces  x 20 seeds = 2,000 reconstructions
 #  -> results/recons_mine/results_patches_*/      same directory names and layout as recons/ in the bundle
 ```
 

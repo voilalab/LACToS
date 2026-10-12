@@ -1,10 +1,10 @@
 #!/bin/bash
 # Stage 1 (DVXray): sample the DPS reconstructions of the X-ray test images.
-# 144 images (xrsc = scissors, xrgd = weapon-free) x 20 draws = 2,880 reconstructions, about 27 s each: ~22 GPU-hours.
+# 144 images (xrsc = scissors, xrgd = weapon-free) x 20 draws = 2,880 reconstructions.
 #
 #   GPUS="0 1 2 3" bash scripts/10_sample_xray.sh                        # both sets, one shard per listed GPU
 #   GPU=0 bash scripts/10_sample_xray.sh xrsc                            # one set on one GPU
-#   GPU=0 IMAGES=P01809_OL DRAWS=1 bash scripts/10_sample_xray.sh xrsc   # smoke test (~1 min)
+#   GPU=0 IMAGES=P01809_OL DRAWS=1 bash scripts/10_sample_xray.sh xrsc   # smoke test
 #
 # Re-running resumes: reconstructions already on disk are skipped.
 # Output: $OUT/recons_mine/results_patches_ddad_native_xray_{xrsc,xrgd}/   (the layout of recons/ in the asset bundle)

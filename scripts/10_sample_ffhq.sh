@@ -1,10 +1,10 @@
 #!/bin/bash
 # Stage 1 (FFHQ): sample the DPS reconstructions of the face test images with the guided-diffusion FFHQ model.
-# 100 images (faces 22, moreface 28, faces_normal 50) x 20 seeds = 2,000 reconstructions, about 29 s each: ~16 GPU-hours.
+# 100 images (faces 22, moreface 28, faces_normal 50) x 20 seeds = 2,000 reconstructions.
 #
 #   GPUS="0 1 2 3" bash scripts/10_sample_ffhq.sh                     # all three sets, images split over the listed GPUs
 #   GPU=0 bash scripts/10_sample_ffhq.sh faces_normal                 # one set on one GPU
-#   GPU=0 SAMPLES="40" SEEDS=1 bash scripts/10_sample_ffhq.sh faces   # smoke test (~1 min)
+#   GPU=0 SAMPLES="40" SEEDS=1 bash scripts/10_sample_ffhq.sh faces   # smoke test
 #
 # Re-running resumes: images whose seeds are all on disk are skipped.
 # Output: $OUT/recons_mine/results_patches_adm_dps_{faces,moreface,faces_normal}/   (the layout of recons/ in the asset bundle)

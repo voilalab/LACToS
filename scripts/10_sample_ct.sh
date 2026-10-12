@@ -1,10 +1,10 @@
 #!/bin/bash
 # Stage 1 (CHAOS): sample the DPS reconstructions of the CT test slices.
-# 200 slices (cta = with tumour, ctn = normal) x 5 draws = 1,000 reconstructions, about 25 s each: ~7 GPU-hours.
+# 200 slices (cta = with tumour, ctn = normal) x 5 draws = 1,000 reconstructions.
 #
 #   GPUS="0 1 2 3" bash scripts/10_sample_ct.sh                        # both sets, one shard per listed GPU
 #   GPU=0 bash scripts/10_sample_ct.sh cta                             # one set on one GPU
-#   GPU=0 IMAGES=image_0000 DRAWS=1 bash scripts/10_sample_ct.sh cta   # smoke test (~1 min)
+#   GPU=0 IMAGES=image_0000 DRAWS=1 bash scripts/10_sample_ct.sh cta   # smoke test
 #
 # Re-running resumes: reconstructions already on disk are skipped.
 # Output: $OUT/recons_mine/results_patches_ddad_native_CT_{cta,ctn}/   (the layout of recons/ in the asset bundle)
