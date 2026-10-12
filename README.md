@@ -106,9 +106,9 @@ Sampler settings and output layout: `sampling/README.md`.
 
 Stage 3 needs the official implementations of PatchCore, SimpleNet, GLASS and SuperSimpleNet
 (`bash scripts/fetch_third_party.sh` clones them at the commits we used) and their environments
-(`environment/patchcore.txt`, `simplenet.txt` — also used for GLASS —, `ssn_env.txt`; DDAD and
-EfficientAD run in the LACToS environment). DDAD and EfficientAD run in the
-interpreter that runs the script (your `lactos` env); point the script at the other three with
+(`environment/patchcore.txt`, `simplenet.txt` — also used for GLASS —, `ssn_env.txt`). DDAD and
+EfficientAD run in the interpreter that runs the script (your `lactos` env); point the script at
+the other three with
 `PY_PATCHCORE=... PY_SIMPLENET=... PY_SSN=...` or `CONDA_ENVS=/path/to/conda/envs` (the env names
 `patchcore`, `simplenet`, `ssn_env`).
 
