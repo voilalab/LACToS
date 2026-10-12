@@ -4,9 +4,11 @@
 
 Shared by every run: ResNet-101 (torchvision `IMAGENET1K_V2`) layer1–3 features with 3×3 patch
 context, L2-normalised per layer and concatenated (1792 dims); a per-dataset PixelAutoEncoder
-compresses them to 3 dims (`--n_pca 3`, `--autoencoder_path`); SLIC superpixels
-(`super_pixel_generation.py`, 50 segments) are recursively refined to the target size
-(`--superpixel_target_size`); per superpixel, one histogram over the RGB values and one over the
+compresses them to 3 dims (`--n_pca 3`, `--autoencoder_path`); the superpixels are a
+marker-controlled watershed of the image's edge map, with a regular grid of markers spaced for the
+target size (`--superpixel_target_size`, `ood/superpixels.py`; the coarse SLIC mask that
+`evaluate.py` also caches via `super_pixel_generation.py` does not enter the scores); per
+superpixel, one histogram over the RGB values and one over the
 3 latent values of all reconstruction pixels (`--bins_rgb`, `--bins_pca`), optionally smoothed
 with a Gaussian of `--smooth_sigma` bins; the score is (NLL − entropy) of the test image's pixels
 under each histogram, intensity term + λ · feature term; the per-superpixel map is smoothed with a
