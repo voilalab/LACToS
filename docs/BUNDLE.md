@@ -1,12 +1,12 @@
-# The asset bundle `LACToS_table1_assets`
+# The asset bundle `LACToS_assets`
 
-Download: **Google Drive link: TODO (insert after upload)**. Archive: `LACToS_table1_assets.tar`
+Download: **Google Drive link: TODO (insert after upload)**. Archive: `LACToS_assets.tar`
 (6.7 GB). Extract anywhere and either symlink it to `<repo>/assets` or set
-`ASSETS=/path/to/LACToS_table1_assets` for every script. `bash scripts/check_assets.sh` checks
+`ASSETS=/path/to/LACToS_assets` for every script. `bash scripts/check_assets.sh` checks
 that the extracted tree is complete (required files, image and reconstruction counts).
 
 ```
-LACToS_table1_assets/
+LACToS_assets/
 ├── checkpoints/
 │   ├── lactos/
 │   │   ├── ae_CT.pth, ae_faces.pth, ae_xray.pth   PixelAutoEncoder 1792 -> 3 (state dicts, 8 MB each)

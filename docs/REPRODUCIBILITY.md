@@ -37,7 +37,7 @@ torch 2.0.1+cu118, torchvision 0.15.2, scikit-image 0.19.2, scikit-learn 1.2.2, 
 ## 2026-10-10 — clean-clone verification (commit fa7ab56, the trimmed branch)
 
 A fresh `git clone` of this code into an empty directory (no `assets` entry in the tree), then with
-`ASSETS=/path/to/LACToS_table1_assets` exported and nothing else from the lab reachable through the
+`ASSETS=/path/to/LACToS_assets` exported and nothing else from the lab reachable through the
 repository:
 
 ```

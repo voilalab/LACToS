@@ -11,7 +11,7 @@ OUT="${OUT:-$ROOT/results}"
 GPU="${GPU:-0}"
 MAX_SAMPLES="${MAX_SAMPLES:-}"
 
-_fail() { echo "$*" >&2; echo "extract LACToS_table1_assets.tar and either place/symlink it at $ROOT/assets or set ASSETS=/path/to/LACToS_table1_assets" >&2; exit 2; }
+_fail() { echo "$*" >&2; echo "extract LACToS_assets.tar and either place/symlink it at $ROOT/assets or set ASSETS=/path/to/LACToS_assets" >&2; exit 2; }
 if [ -n "${ASSETS:-}" ]; then
   [ -d "$ASSETS/checkpoints" ] || _fail "asset bundle not found at ASSETS=$ASSETS"
   ASSETS="$(cd "$ASSETS" && pwd -P)"
