@@ -10,7 +10,7 @@
 ```
 
 Regression checks run before the full runs (maintainers' tools against the lab's reference dumps,
-the files the paper's numbers were computed from; not part of this branch):
+the files the paper's numbers were computed from; not part of this repository):
 
 | test | what it checks | result |
 |---|---|---|
