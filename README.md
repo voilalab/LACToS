@@ -43,7 +43,7 @@ Layout and provenance of every file: `docs/BUNDLE.md`, `docs/PROVENANCE.md`.
 ## Setup
 
 ```bash
-git clone -b release/lactos-table1 <this repository> LACToS && cd LACToS
+git clone <URL of this repository> LACToS && cd LACToS
 tar xf /path/to/LACToS_table1_assets.tar            # -> LACToS_table1_assets/
 ln -s $PWD/../LACToS_table1_assets assets           # or: export ASSETS=/path/to/LACToS_table1_assets
 
