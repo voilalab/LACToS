@@ -2,9 +2,9 @@
 # Stage 1 (CHAOS): sample the DPS reconstructions of the CT test slices.
 # 200 slices (cta = with tumour, ctn = normal) x 5 draws = 1,000 reconstructions.
 #
-#   GPUS="0 1 2 3" bash scripts/10_sample_ct.sh                        # both sets, one shard per listed GPU
-#   GPU=0 bash scripts/10_sample_ct.sh cta                             # one set on one GPU
-#   GPU=0 IMAGES=image_0000 DRAWS=1 bash scripts/10_sample_ct.sh cta   # smoke test
+#   GPUS="0 1 2 3" bash scripts/sample_ct.sh                        # both sets, one shard per listed GPU
+#   GPU=0 bash scripts/sample_ct.sh cta                             # one set on one GPU
+#   GPU=0 IMAGES=image_0000 DRAWS=1 bash scripts/sample_ct.sh cta   # smoke test
 #
 # Re-running resumes: reconstructions already on disk are skipped.
 # Output: $OUT/recons_mine/results_patches_ddad_native_CT_{cta,ctn}/   (the layout of recons/ in the asset bundle)
@@ -39,4 +39,4 @@ for sub in "${SETS[@]}"; do
   # the ctn images are already named image_6XXX in the bundle, so the reconstructions get those ids directly
   python sampling/wire_recons.py --src "$RAW/CT_$sub" --dst "$OUT/recons_mine/results_patches_ddad_native_CT_$sub" --n_draws "$DRAWS"
 done
-echo "done -> $OUT/recons_mine   (score: RECON_ROOT=$OUT/recons_mine GPU=${GPU_LIST[0]} bash scripts/20_score_lactos.sh CT)"
+echo "done -> $OUT/recons_mine   (score: RECON_ROOT=$OUT/recons_mine GPU=${GPU_LIST[0]} bash scripts/score_lactos.sh CT)"

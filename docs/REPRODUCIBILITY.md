@@ -2,8 +2,8 @@
 
 ## 2026-10-10 — development run (branch worktree + bundle), all 63 cells
 
-`scripts/20_score_lactos.sh` (3 GPUs in parallel, ~45 min), `scripts/30_run_baselines.sh` (1 GPU,
-~25 min) and `scripts/40_make_table1.py` on the staged bundle:
+`scripts/score_lactos.sh` (3 GPUs in parallel, ~45 min), `scripts/run_baselines.sh` (1 GPU,
+~25 min) and `scripts/make_table1.py` on the staged bundle:
 
 ```
 63/63 cells agree at 4 decimals.   PASS
@@ -16,7 +16,7 @@ the files the paper's numbers were computed from; not part of this repository):
 |---|---|---|
 | LACToS dump check | LACToS delta maps of the first 2 images of every set vs the lab dumps | CT, X-ray, FFHQ: max abs diff <= 1e-4 (CT needs `--ae_encode folded`) |
 | baseline map check | published-blur maps of all 6 baselines, 2 images per set, vs the lab raw maps | r = 1.000000 and max diff 0 for all methods, except PatchCore max diff 2e-5 (GPU k-NN vs CPU faiss) |
-| sampler smoke tests (2 images, 2 draws, 2 GPUs) | `scripts/10_sample_*.sh`, then `RECON_ROOT=... scripts/20_score_lactos.sh` and `scripts/15_pack_bundle.sh` | all run end to end; FFHQ draws equal the bundled ones up to 1 gray level; CHAOS / DVXray draws differ (unseeded reverse-step noise, see `sampling/README.md`) |
+| sampler smoke tests (2 images, 2 draws, 2 GPUs) | `scripts/sample_*.sh`, then `RECON_ROOT=... scripts/score_lactos.sh` | all run end to end; FFHQ draws equal the bundled ones up to 1 gray level; CHAOS / DVXray draws differ (unseeded reverse-step noise, see `sampling/README.md`) |
 
 Hardware / software of the run: NVIDIA RTX A6000 (48 GB), CUDA 11.8 driver stack, Python 3.10.20,
 torch 2.0.1+cu118, torchvision 0.15.2, scikit-image 0.19.2, scikit-learn 1.2.2, scipy 1.10.1
@@ -42,9 +42,9 @@ repository:
 
 ```
 bash scripts/fetch_third_party.sh          # 4 pinned clones
-bash scripts/00_check_assets.sh            # bundle OK (8,203 files, all checksums)
-GPU=0 bash scripts/20_score_lactos.sh CT & GPU=1 ... xray & GPU=2 ... ffhq & GPU=3 bash scripts/30_run_baselines.sh & wait
-python scripts/40_make_table1.py
+bash scripts/check_assets.sh               # bundle OK
+GPU=0 bash scripts/score_lactos.sh CT & GPU=1 ... xray & GPU=2 ... ffhq & GPU=3 bash scripts/run_baselines.sh & wait
+python scripts/make_table1.py
 ```
 
 Result after 41 minutes of wall time on four RTX A6000s (an earlier identical run on commit b7f25fc, before the final trim, also passed):

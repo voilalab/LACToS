@@ -1,11 +1,11 @@
 #!/usr/bin/env python
-"""Check an extracted LACToS Table-1 asset bundle: layout, sample/draw counts, SHA-256.
+"""Check an extracted LACToS asset bundle: required files, image counts, reconstruction counts.
 
-  python tools/check_bundle.py ASSETS_DIR [--no-sha] [--write-sha]
+  python tools/check_bundle.py ASSETS_DIR
 
 Exit code 0 = complete bundle. Prints every missing or mismatching item.
 """
-import argparse, hashlib, os, sys
+import argparse, os, sys
 
 EXPECTED_RECONS = {  # dir under recons/ : (n_samples, n_draws, sample prefix)
     "results_patches_ddad_native_CT_cta": (100, 5, "samples_image_0"),
@@ -20,7 +20,7 @@ EXPECTED_FILES = [
     "checkpoints/lactos/ae_CT.pth", "checkpoints/lactos/ae_faces.pth", "checkpoints/lactos/ae_xray.pth",
     "checkpoints/lactos/backbone_xray_ddad_lastlayer_feat4.pth",
     "checkpoints/diffusion/ct_model050000.pt", "checkpoints/diffusion/xray_model500000.pt", "checkpoints/diffusion/ffhq_10m.pt",
-    "data/CT/grid_subset_selection.json", "data/xray/grid_subset_selection.json", "SHA256SUMS",
+    "data/CT/grid_subset_selection.json", "data/xray/grid_subset_selection.json",
 ]
 for b in ("ffhq", "ct", "xray"):
     EXPECTED_FILES += [f"checkpoints/baselines/{b}/patchcore/nnscorer_search_index.faiss",
@@ -37,30 +37,6 @@ EXPECTED_DATA_COUNTS = {  # dir : (n_png, suffix)
     "data/ffhq/moreface/test": 28, "data/ffhq/moreface/ground_truth": 28,
     "data/ffhq/faces_normal/test": 50, "data/ffhq/faces_normal/ground_truth": 50,
 }
-
-
-def sha256_file(path, chunk=1 << 22):
-    h = hashlib.sha256()
-    with open(path, "rb") as fh:
-        for block in iter(lambda: fh.read(chunk), b""):
-            h.update(block)
-    return h.hexdigest()
-
-
-def write_sha(root):
-    """(Re)write SHA256SUMS for every file under root. Use after changing a bundle, e.g. after
-    replacing recons/ with reconstructions you sampled yourself (scripts/15_pack_bundle.sh does this)."""
-    rows = []
-    for d, _, files in os.walk(root):
-        for f in files:
-            rel = os.path.relpath(os.path.join(d, f), root)
-            if rel != "SHA256SUMS":
-                rows.append((rel, sha256_file(os.path.join(d, f))))
-    rows.sort()
-    with open(os.path.join(root, "SHA256SUMS"), "w") as fh:
-        for rel, h in rows:
-            fh.write(f"{h}  {rel}\n")
-    print(f"wrote SHA256SUMS ({len(rows)} files)")
 
 
 def recon_problems(root):
@@ -98,44 +74,13 @@ def data_problems(root):
     return out
 
 
-def sha_problems(root):
-    out = []
-    path = os.path.join(root, "SHA256SUMS")
-    if not os.path.exists(path):
-        return ["SHA256SUMS missing"]
-    listed = {line.rstrip("\n").split("  ", 1)[1] for line in open(path)}
-    for d, _, files in os.walk(root):
-        for f in files:
-            rel = os.path.relpath(os.path.join(d, f), root)
-            if rel not in listed and rel != "SHA256SUMS":
-                out.append(f"file not listed in SHA256SUMS (stray?): {rel}")
-    for d, dirs, _ in os.walk(root):
-        for x in dirs:
-            if os.path.islink(os.path.join(d, x)):
-                out.append(f"unexpected symlink: {os.path.relpath(os.path.join(d, x), root)}")
-    for line in open(path):
-        h, rel = line.rstrip("\n").split("  ", 1)
-        p = os.path.join(root, rel)
-        if not os.path.exists(p):
-            out.append(f"listed file missing: {rel}"); continue
-        if sha256_file(p) != h:
-            out.append(f"sha256 mismatch: {rel}")
-    return out
-
-
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("assets")
-    ap.add_argument("--no-sha", action="store_true", help="skip the SHA-256 pass (slow on 6 GB)")
-    ap.add_argument("--write-sha", action="store_true", help="(re)write SHA256SUMS first, then check")
     a = ap.parse_args()
     root = a.assets
-    if a.write_sha:
-        write_sha(root)
     problems = [f"missing file {f}" for f in EXPECTED_FILES if not os.path.exists(os.path.join(root, f))]
     problems += data_problems(root) + recon_problems(root)
-    if not a.no_sha:
-        problems += sha_problems(root)
     for p in problems:
         print("  ", p)
     if problems:

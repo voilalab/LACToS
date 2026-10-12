@@ -1,9 +1,9 @@
 #!/bin/bash
 # Stage 3: baseline inference at the Table 1 settings -> $OUT/baseline_maps/<bench>/<method>/<setting>/<set>__<id>.npz
 #
-#   GPU=0 bash scripts/30_run_baselines.sh                # all three benchmarks (~1.5 GPU-hours, DDAD dominates)
-#   GPU=0 bash scripts/30_run_baselines.sh ct             # one of: ffhq | ct | xray
-#   LIMIT=2 GPU=0 bash scripts/30_run_baselines.sh ffhq   # smoke test: first two images of every set
+#   GPU=0 bash scripts/run_baselines.sh                # all three benchmarks (~1.5 GPU-hours, DDAD dominates)
+#   GPU=0 bash scripts/run_baselines.sh ct             # one of: ffhq | ct | xray
+#   LIMIT=2 GPU=0 bash scripts/run_baselines.sh ffhq   # smoke test: first two images of every set
 #
 # Each method runs under its own conda environment (environment/*.txt):
 #   patchcore -> env "patchcore" (python 3.8, faiss)      simplenet, glass -> env "simplenet" (python 3.8)

@@ -6,7 +6,7 @@ post hoc (posthoc.py):
   simplenet/glass/supersimplenet : map [256, 256] with the internal sigma=4 blur disabled
   efficientad    : map_st, map_ae [256, 256] (quantile-normalised, padded, upsampled)
 Preprocessing per (method, bench) follows the runs behind the published numbers
-(table1_common.PREP). Run under the method's own conda env (see scripts/30_run_baselines.sh).
+(table1_common.PREP). Run under the method's own conda env (see scripts/run_baselines.sh).
 """
 import argparse, os, pickle, sys
 import numpy as np

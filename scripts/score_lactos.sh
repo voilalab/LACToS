@@ -3,10 +3,10 @@
 # Reads the reconstructions and checkpoints from the bundle, writes one delta-map
 # dump per test image:   $OUT/lactos_maps/<bench>/<tag>/<set>/samples_<id>.npz
 #
-#   GPU=0 bash scripts/20_score_lactos.sh              # all three benchmarks (~2-3 GPU-hours)
-#   GPU=0 bash scripts/20_score_lactos.sh CT           # one of: CT | xray | ffhq
-#   MAX_SAMPLES=2 GPU=0 bash scripts/20_score_lactos.sh ffhq   # smoke test on two images per set
-#   RECON_ROOT=results/recons_mine GPU=0 bash scripts/20_score_lactos.sh CT   # score reconstructions you sampled yourself (stage 1)
+#   GPU=0 bash scripts/score_lactos.sh              # all three benchmarks (~2-3 GPU-hours)
+#   GPU=0 bash scripts/score_lactos.sh CT           # one of: CT | xray | ffhq
+#   MAX_SAMPLES=2 GPU=0 bash scripts/score_lactos.sh ffhq   # smoke test on two images per set
+#   RECON_ROOT=results/recons_mine GPU=0 bash scripts/score_lactos.sh CT   # score reconstructions you sampled yourself (stage 1)
 #
 # Operating points (superpixel size S, draws M, histogram sigma H, bins intensity x feature, lambda):
 #   CHAOS  S=100 M=5  H=0.5 16x64 lambda=1     -> one run per set, full score, --ae_encode folded (see evaluate.py)

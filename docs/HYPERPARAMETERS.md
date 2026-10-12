@@ -1,6 +1,6 @@
 # Hyper-parameters, cell by cell
 
-## LACToS (`scripts/20_score_lactos.sh` → `evaluate.py`)
+## LACToS (`scripts/score_lactos.sh` → `evaluate.py`)
 
 Shared by every run: ResNet-101 (torchvision `IMAGENET1K_V2`) layer1–3 features with 3×3 patch
 context, L2-normalised per layer and concatenated (1792 dims); a per-dataset PixelAutoEncoder
@@ -49,7 +49,7 @@ the paper was computed with `folded` (the lab's package), the FFHQ row with `dir
 
 DVXray uses λ = 0 (no autoencoder) and is unaffected.
 
-## Baselines (`scripts/30_run_baselines.sh` → `baselines/infer_*.py`, composed by `baselines/compose.py`)
+## Baselines (`scripts/run_baselines.sh` → `baselines/infer_*.py`, composed by `baselines/compose.py`)
 
 | Method | Input (resize → crop) | Setting dir | Post-hoc knob (Table 6) | Published blur composition |
 |---|---|---|---|---|

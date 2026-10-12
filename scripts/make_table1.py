@@ -2,9 +2,9 @@
 """Stage 4: build Table 1 from the stage-2 (LACToS) and stage-3 (baseline) outputs and
 compare every cell with the paper (expected/table1.json).
 
-  python scripts/40_make_table1.py                 # all 7 methods x 3 benchmarks
-  python scripts/40_make_table1.py --only lactos   # LACToS column only (after scripts/20_score_lactos.sh)
-  python scripts/40_make_table1.py --only baselines
+  python scripts/make_table1.py                 # all 7 methods x 3 benchmarks
+  python scripts/make_table1.py --only lactos   # LACToS column only (after scripts/score_lactos.sh)
+  python scripts/make_table1.py --only baselines
 
 Writes results/table1.json, results/table1.md, results/table1.tex and prints the diff
 against the paper. Exit code 0 only when every available cell agrees to 4 decimals.
@@ -34,7 +34,7 @@ LABELS = {"patchcore": "PatchCore", "simplenet": "SimpleNet", "supersimplenet": 
           "efficientad": "EfficientAD", "glass": "GLASS", "ddad": "DDAD", "lactos": "LACToS (Ours)"}
 N_IMAGES = {"CT": 200, "ffhq": 100, "xray": 144}
 
-# LACToS operating points (paper Table 5): dump tags produced by scripts/20_score_lactos.sh
+# LACToS operating points (paper Table 5): dump tags produced by scripts/score_lactos.sh
 LACTOS = {
     "CT":   dict(full="sp100_m5_hs0.5_b16x64", rgb=None, lam=1.0, sigma=2, sets=["cta", "ctn"]),
     "ffhq": dict(full="sp20_m20_hs1_b16x32", rgb="sp20_m20_hs1_rgbonly_b16", lam=0.25, sigma=5, sets=["faces", "moreface", "faces_normal"]),
@@ -73,10 +73,10 @@ def lactos_cell(bench):
         return None
     if full is not None and rgb is not None and set(full) != set(rgb):
         print(f"  [incomplete] {bench}: the full and the RGB-only runs cover different images "
-              f"({len(full)} vs {len(rgb)}); re-run scripts/20_score_lactos.sh {bench}")
+              f"({len(full)} vs {len(rgb)}); re-run scripts/score_lactos.sh {bench}")
         return "incomplete"
     if len(base) != N_IMAGES[bench]:
-        print(f"  [incomplete] {bench}: {len(base)} LACToS dumps, expected {N_IMAGES[bench]} (run scripts/20_score_lactos.sh {bench})")
+        print(f"  [incomplete] {bench}: {len(base)} LACToS dumps, expected {N_IMAGES[bench]} (run scripts/score_lactos.sh {bench})")
         return "incomplete"
     maps, gts, valids = [], [], []
     for key, z in base.items():
@@ -98,7 +98,7 @@ def baseline_cell(bench, method):
     if not files:
         return None
     if len(files) != N_IMAGES[bench]:
-        print(f"  [incomplete] {bench}/{method}: {len(files)} maps, expected {N_IMAGES[bench]} (run scripts/30_run_baselines.sh {bench_dir})")
+        print(f"  [incomplete] {bench}/{method}: {len(files)} maps, expected {N_IMAGES[bench]} (run scripts/run_baselines.sh {bench_dir})")
         return "incomplete"
     maps, gts, valids = [], [], []
     for f in files:

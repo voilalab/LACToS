@@ -1,5 +1,5 @@
 # FFHQ set 'faces_normal': DPS on the guided-diffusion FFHQ model (DPS2022 ffhq_10m.pt).
-# Paper Table 5: sigma 0.01, scale 0.1, 1000 steps (skip 1), eta 1, 20 seeds. Used by scripts/10_sample_ffhq.sh.
+# Paper Table 5: sigma 0.01, scale 0.1, 1000 steps (skip 1), eta 1, 20 seeds. Used by scripts/sample_ffhq.sh.
 sampler:
   name: additive_dps
   params: {sigma: 0.01, scale: 0.1, skip: 1, eta: 1.0, trajectory_steps: 1000, beta_start: 0.0001, beta_end: 0.02}

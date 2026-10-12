@@ -1,13 +1,12 @@
 # The asset bundle `LACToS_table1_assets`
 
 Download: **Google Drive link: TODO (insert after upload)**. Archive: `LACToS_table1_assets.tar`
-(size and SHA-256 at the bottom of this file). Extract anywhere and either symlink it to
-`<repo>/assets` or set `ASSETS=/path/to/LACToS_table1_assets` for every script.
-`bash scripts/00_check_assets.sh` verifies the whole tree against `SHA256SUMS`.
+(6.7 GB). Extract anywhere and either symlink it to `<repo>/assets` or set
+`ASSETS=/path/to/LACToS_table1_assets` for every script. `bash scripts/check_assets.sh` checks
+that the extracted tree is complete (required files, image and reconstruction counts).
 
 ```
 LACToS_table1_assets/
-├── SHA256SUMS                                  one line per file
 ├── checkpoints/
 │   ├── lactos/
 │   │   ├── ae_CT.pth, ae_faces.pth, ae_xray.pth   PixelAutoEncoder 1792 -> 3 (state dicts, 8 MB each)
@@ -47,11 +46,5 @@ LACToS_table1_assets/
 | data | ~1,900 PNG + JSON | 40 MB |
 | **total** | 8,203 | **6.3 GB** |
 
-The bundle is checked by `tools/check_bundle.py`, which `scripts/00_check_assets.sh` calls.
-`scripts/15_pack_bundle.sh NEW_DIR` assembles a bundle from the current one and the reconstructions
-sampled in stage 1 (`results/recons_mine`), and writes its `SHA256SUMS`
-(`python tools/check_bundle.py DIR --write-sha` does only that). Every file is a plain copy;
-there are no symlinks inside the archive.
-
-Archive: `LACToS_table1_assets.tar` — 6.7 GB, SHA-256 `0568a7940ad3eb6f80304980cf080fb01aff8305781b3eb8f86fd6df5a094df4`
-(`tar -cf LACToS_table1_assets.tar LACToS_table1_assets`, uncompressed: the contents are PNG and PyTorch files that do not compress).
+The archive is an uncompressed tar (its contents are PNG and PyTorch files, which do not compress).
+Every file is a plain copy; there are no symlinks inside.

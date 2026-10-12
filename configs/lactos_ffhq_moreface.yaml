@@ -1,5 +1,5 @@
 # LACToS evaluation config for FFHQ set 'moreface' (ADM+DPS reconstructions, 20 seeds). Per-cell flags (bins, superpixel size, histogram sigma, AE)
-# are passed on the command line by scripts/20_score_lactos.sh; this file holds the data layout
+# are passed on the command line by scripts/score_lactos.sh; this file holds the data layout
 # and the fixed pipeline settings. Paths are relative to the repository root (assets/ = extracted bundle).
 sampling:
   enabled: false

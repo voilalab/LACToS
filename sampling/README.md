@@ -5,20 +5,20 @@ sampling (DPS) under the identity forward model y = x + σn. The asset bundle co
 reconstructions the paper scored (`recons/`); the scripts here are how they are produced.
 
 ```bash
-GPUS="0 1 2 3" bash scripts/10_sample_ct.sh       # CHAOS   200 slices x  5 draws = 1,000 reconstructions
-GPUS="0 1 2 3" bash scripts/10_sample_xray.sh     # DVXray  144 images x 20 draws = 2,880 reconstructions
-GPUS="0 1 2 3" bash scripts/10_sample_ffhq.sh     # FFHQ    100 faces  x 20 seeds = 2,000 reconstructions
+GPUS="0 1 2 3" bash scripts/sample_ct.sh       # CHAOS   200 slices x  5 draws = 1,000 reconstructions
+GPUS="0 1 2 3" bash scripts/sample_xray.sh     # DVXray  144 images x 20 draws = 2,880 reconstructions
+GPUS="0 1 2 3" bash scripts/sample_ffhq.sh     # FFHQ    100 faces  x 20 seeds = 2,000 reconstructions
 ```
 
 Every script starts one process per GPU in `GPUS` (or uses `GPU=<index>`),
 writes one log per process to `results/logs/sample_*_shard<i>.log`, and resumes when re-run:
 reconstructions already on disk are skipped. A set can be named to run it alone
-(`scripts/10_sample_ct.sh cta`, `... xray.sh xrgd`, `... ffhq.sh faces_normal`). Smoke tests:
+(`scripts/sample_ct.sh cta`, `... xray.sh xrgd`, `... ffhq.sh faces_normal`). Smoke tests:
 
 ```bash
-GPU=0 IMAGES=image_0000 DRAWS=1 bash scripts/10_sample_ct.sh cta
-GPU=0 IMAGES=P01809_OL  DRAWS=1 bash scripts/10_sample_xray.sh xrsc
-GPU=0 SAMPLES="40" SEEDS=1      bash scripts/10_sample_ffhq.sh faces
+GPU=0 IMAGES=image_0000 DRAWS=1 bash scripts/sample_ct.sh cta
+GPU=0 IMAGES=P01809_OL  DRAWS=1 bash scripts/sample_xray.sh xrsc
+GPU=0 SAMPLES="40" SEEDS=1      bash scripts/sample_ffhq.sh faces
 ```
 
 ## Output and what to do with it
@@ -34,18 +34,14 @@ results/recons_mine/
 The seven `results_patches_*` directories have the names and layout of `recons/` in the bundle,
 which is never modified by these scripts.
 
-* **Score them:** `OUT=results_mine RECON_ROOT=results/recons_mine GPU=0 bash scripts/20_score_lactos.sh`,
-  then `OUT=results_mine python scripts/40_make_table1.py --only lactos`.
-* **Pack them for upload:** `bash scripts/15_pack_bundle.sh /path/to/new_bundle` builds a complete
-  bundle (checkpoints and data from the current bundle; each reconstruction set from
-  `results/recons_mine` if it was sampled, otherwise from the current bundle), writes its
-  `SHA256SUMS` and checks it. Archive that directory with `tar -cf`.
+Score them with `RECON_ROOT=results/recons_mine GPU=0 bash scripts/score_lactos.sh`, then
+`python scripts/make_table1.py --only lactos`.
 
 ## Samplers and settings (paper Table 5)
 
 | | CHAOS | DVXray | FFHQ |
 |---|---|---|---|
-| script | `10_sample_ct.sh` | `10_sample_xray.sh` | `10_sample_ffhq.sh` |
+| script | `sample_ct.sh` | `sample_xray.sh` | `sample_ffhq.sh` |
 | sampler | `sampling/dps/sample_fast.py` | `sampling/dps/sample_fast.py` | `sampling/generate_recons.py` (`additive_dps`) |
 | noise σ | 0.1 | 2.0 | 0.01 |
 | DPS scale | 0.4 (ζ′ = 0.2) | 1.0 (ζ′ = 0.5) | 0.1 |
@@ -86,5 +82,5 @@ sampler produced (pooled AUROC / AP / AUPRO, scored on one machine):
 
 (These rows were scored on CPU, which itself shifts the CHAOS cell from 0.9620 / 0.4318 / 0.8764
 by a few units in the fourth and third decimal; see `docs/REPRODUCIBILITY.md`.) With re-sampled
-CHAOS or DVXray reconstructions, `scripts/40_make_table1.py` reports the LACToS cells as `DIFF`
+CHAOS or DVXray reconstructions, `scripts/make_table1.py` reports the LACToS cells as `DIFF`
 with respect to the paper; the bundled reconstructions are the ones behind the published numbers.

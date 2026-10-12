@@ -5,7 +5,7 @@ Per test image: load the M reconstructions and the image, build / load the SLIC 
 reconstructions with ResNet-101 features compressed by the per-dataset PixelAutoEncoder
 (ood.embeddings + PixelAutoEncoder below), score every superpixel by (NLL - entropy) of the
 image's pixels under the reconstructions' RGB and latent histograms (ood.scoring), and dump the
-delta map. scripts/20_score_lactos.sh runs this for every set with the paper's flags; stage 4
+delta map. scripts/score_lactos.sh runs this for every set with the paper's flags; stage 4
 pools the dumps into Table 1.
 
 Reconstruction layout (ood.data): <results_dir>/<sample>/<test_origin>_0_<bottom_suffix>/inpainting/{recon/*.png, label/0_00000.png}
@@ -362,7 +362,7 @@ def _run_single_sample(cfg):
             order=0, mode="edge", preserve_range=True, anti_aliasing=False,
         ).astype(np.uint8)
 
-    # Per-image dump read by scripts/40_make_table1.py: delta_map (float32, NaN where a superpixel
+    # Per-image dump read by scripts/make_table1.py: delta_map (float32, NaN where a superpixel
     # could not be scored), gt_mask (uint8), label_image (uint8), valid_mask (uint8 or EMPTY when
     # every pixel is valid; full_metric_table.py accepts both).
     dump_dir = cfg["eval"].get("dump_maps_dir")

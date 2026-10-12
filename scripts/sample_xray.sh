@@ -2,9 +2,9 @@
 # Stage 1 (DVXray): sample the DPS reconstructions of the X-ray test images.
 # 144 images (xrsc = scissors, xrgd = weapon-free) x 20 draws = 2,880 reconstructions.
 #
-#   GPUS="0 1 2 3" bash scripts/10_sample_xray.sh                        # both sets, one shard per listed GPU
-#   GPU=0 bash scripts/10_sample_xray.sh xrsc                            # one set on one GPU
-#   GPU=0 IMAGES=P01809_OL DRAWS=1 bash scripts/10_sample_xray.sh xrsc   # smoke test
+#   GPUS="0 1 2 3" bash scripts/sample_xray.sh                        # both sets, one shard per listed GPU
+#   GPU=0 bash scripts/sample_xray.sh xrsc                            # one set on one GPU
+#   GPU=0 IMAGES=P01809_OL DRAWS=1 bash scripts/sample_xray.sh xrsc   # smoke test
 #
 # Re-running resumes: reconstructions already on disk are skipped.
 # Output: $OUT/recons_mine/results_patches_ddad_native_xray_{xrsc,xrgd}/   (the layout of recons/ in the asset bundle)
@@ -35,4 +35,4 @@ for sub in "${SETS[@]}"; do
   [ $fail -eq 0 ] || { echo "  sampling FAILED, see $LOG/sample_xray_${sub}_shard*.log"; exit 1; }
   python sampling/wire_recons.py --src "$RAW/xray_$sub" --dst "$OUT/recons_mine/results_patches_ddad_native_xray_$sub" --n_draws "$DRAWS"
 done
-echo "done -> $OUT/recons_mine   (score: RECON_ROOT=$OUT/recons_mine GPU=${GPU_LIST[0]} bash scripts/20_score_lactos.sh xray)"
+echo "done -> $OUT/recons_mine   (score: RECON_ROOT=$OUT/recons_mine GPU=${GPU_LIST[0]} bash scripts/score_lactos.sh xray)"
