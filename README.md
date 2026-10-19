@@ -87,9 +87,10 @@ LACToS / EfficientAD / DDAD environment; the other baselines need three more, se
 
 Everything the code needs besides itself is in one archive, the asset bundle.
 
-**Download:** `LACToS_assets.tar` — **Google Drive link: TODO (insert after upload)**.
+**Download:** [`LACToS_assets.tar`](https://drive.google.com/file/d/1o5bz1IcF077sUJUqgsZIuAWurfJMjtsj/view?usp=sharing) (Google Drive, 6.3 GB).
 
 ```bash
+pip install gdown && gdown 1o5bz1IcF077sUJUqgsZIuAWurfJMjtsj   # or download from the link above
 tar xf /path/to/LACToS_assets.tar            # -> LACToS_assets/
 ln -s /path/to/LACToS_assets assets          # or: export ASSETS=/path/to/LACToS_assets
 bash scripts/check_assets.sh                        # checks that the bundle is complete
