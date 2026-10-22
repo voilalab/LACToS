@@ -11,7 +11,8 @@ Changes vs. original (aligned with full_run_hist.py):
     throughput when GPU memory allows.
 """
 
-from typing import Optional, Tuple
+import gc
+from typing import Dict, Optional, Tuple
 
 import numpy as np
 import torch
@@ -150,3 +151,74 @@ def to_tensor01(img_np: np.ndarray, device: str = "cuda") -> torch.Tensor:
 #         components: (n_components, C) PCA basis.
 #     """
 #     C, H, W = label_feat_cpu.shape
+
+# ── Per-image PCA projection (toy experiments) ──────────────────────────────────
+# The main experiments compress the ResNet features with a trained PixelAutoEncoder
+# (evaluate.py). The toy experiments (toy/) have no autoencoder: a PCA basis is fitted
+# on the test image's own features and every reconstruction is projected onto it.
+
+def compute_pca_basis(label_feat_cpu: torch.Tensor, n_components: int,
+                      device: torch.device = None) -> Tuple[np.ndarray, np.ndarray]:
+    """PCA basis of one image's (C, H, W) feature map: mean (1, C) and components (n, C)."""
+    C, H, W = label_feat_cpu.shape
+    X = label_feat_cpu.permute(1, 2, 0).reshape(-1, C)   # (H*W, C)
+    mu = X.mean(dim=0, keepdim=True)
+    Xc = X - mu
+    if device is not None and device.type == "cuda":
+        _, _, Vt = torch.linalg.svd(Xc.to(device), full_matrices=False)
+        components = Vt[:n_components].cpu().numpy()
+    else:
+        _, _, Vt = np.linalg.svd(Xc.numpy(), full_matrices=False)
+        components = Vt[:n_components]
+    return mu.numpy(), components
+
+
+def project_to_pca(feat_hwc: np.ndarray, mu: np.ndarray, components: np.ndarray) -> np.ndarray:
+    """(M, C) features -> (M, n) projections."""
+    return (feat_hwc - mu) @ components.T
+
+
+def project_to_pca_gpu(feat_tensor: torch.Tensor, mu: np.ndarray, components: np.ndarray,
+                       device: torch.device) -> torch.Tensor:
+    """(B, C, H, W) features on `device` -> (B, H, W, n) projections."""
+    mu_t = torch.from_numpy(mu).float().to(device)
+    comp_t = torch.from_numpy(components).float().to(device)
+    B, C, H, W = feat_tensor.shape
+    x = feat_tensor.permute(0, 2, 3, 1).reshape(-1, C)
+    return ((x - mu_t) @ comp_t.t()).reshape(B, H, W, -1)
+
+
+def embed_and_project(embedder: ResNetPixelEmbedder, label_image: np.ndarray,
+                      images_recon_all: np.ndarray, n_pca: int = 9, device: str = "cuda",
+                      batch_size: int = 8) -> Dict[str, np.ndarray]:
+    """Embed the image and its reconstructions and project them onto the image's PCA basis.
+
+    Returns label_pca_map (H, W, n_pca), pca_feats_recon (N, H, W, n_pca), mu, components.
+    The reconstructions pass through the ResNet in batches of `batch_size`; cuDNN's
+    numerics depend on the batch composition, so keep the batch size and the order of
+    the reconstructions fixed when results must be reproduced to the last bit.
+    """
+    model_device = next(embedder.parameters()).device
+    with torch.no_grad():
+        label_x = to_tensor01(label_image, device=str(model_device))
+        label_feat = embedder(label_x).squeeze(0).cpu()
+    mu, components = compute_pca_basis(label_feat, n_components=n_pca, device=model_device)
+    C, H, W = label_feat.shape
+    X_label = label_feat.permute(1, 2, 0).reshape(-1, C).numpy()
+    label_pca_map = project_to_pca(X_label, mu, components).reshape(H, W, n_pca)
+
+    x_all = torch.from_numpy(images_recon_all).float().permute(0, 3, 1, 2)
+    if x_all.max() > 1.0:
+        x_all = x_all / 255.0
+    pca_list = []
+    with torch.no_grad():
+        for i in range(0, x_all.shape[0], batch_size):
+            xb = x_all[i:i + batch_size].to(model_device)
+            fb = embedder(xb)
+            pca_list.append(project_to_pca_gpu(fb, mu, components, model_device).cpu())
+            del xb, fb
+            torch.cuda.empty_cache()
+    pca_feats_recon = torch.cat(pca_list, 0).numpy()
+    gc.collect()
+    return {"label_pca_map": label_pca_map, "pca_feats_recon": pca_feats_recon,
+            "mu": mu, "components": components}

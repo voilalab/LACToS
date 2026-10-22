@@ -15,6 +15,8 @@ This repository contains
 * the diffusion posterior samplers that draw the reconstructions it scores (`sampling/`),
 * inference code for the six baselines of the paper (`baselines/`),
 * the evaluation code and the scripts that regenerate the paper's main results (`scripts/`),
+* the toy experiments of Section 3 and Appendices B and C, with the training script of their
+  diffusion priors (`toy/`),
 * trained checkpoints, test data, reconstructions and reference results as a separate download
   (the asset bundle).
 
@@ -253,6 +255,34 @@ bundled reconstructions up to PNG rounding; CHAOS and DVXray give new posterior 
 which changes their LACToS cells in the second to third decimal. Sampler settings, output layout and
 smoke tests: `sampling/README.md`.
 
+## Toy experiments
+
+The two synthetic experiments of the paper live in [`toy/`](toy/README.md): the inlier
+distribution is a set of grey shapes, one per quadrant, and the anomaly is a square in the
+top-right quadrant, where inliers only ever have a circle.
+
+| Toy 1 (Section 3, Appendix B): false positives as the inlier vocabulary grows | Toy 2 (Appendix C): a rare inlier feature vs. the anomaly as P(square) falls |
+|---|---|
+| ![Toy 1](docs/figures/toy1_fpr.png) | ![Toy 2](docs/figures/toy2_auroc.png) |
+
+For the main experiments the checkpoints are provided in the bundle. The toy experiments need
+one diffusion prior per dataset (nine datasets, eight priors), and for these the training
+script is provided instead: `toy/train_prior.py` reproduces DDAD's training loop on the
+generated images (about 8.5 hours per prior on one GPU). The rest of the pipeline reuses the
+code above: the DPS sampler, LACToS's scorer, DDAD's anomaly map and PatchCore.
+
+```bash
+python toy/gen_data.py                                # the nine datasets (seeded, ~10 min on CPU)
+GPUS="0 1 2 3 4 5 6 7" bash toy/train_priors.sh       # the eight priors, one per GPU
+GPUS="0 1 2 3" bash toy/run_toy1.sh                   # Figure 2 and Appendix Figure 7
+GPUS="0 1 2 3" bash toy/run_toy2.sh                   # Appendix Figure 9
+```
+
+Each run script samples the reconstructions, scores them with every method and writes the
+figures' data and panels (`results/toy/quad/toy1_fpr_*.{json,md,png}`,
+`results/toy/quadp/toy2_auroc_*.{json,md,png}`). Settings, smoke tests and what reproduces
+exactly: `toy/README.md`.
+
 ## Applying LACToS to other images
 
 `evaluate.py` scores one set of 256×256 images from a config. Copy `configs/template.yaml`, edit
@@ -310,7 +340,7 @@ The template uses the paper's FFHQ setting (20-pixel superpixels, 16 intensity b
 evaluate.py           LACToS scorer (reconstructions -> features -> superpixels -> typicality -> score map)
 ood/                  data loading, ResNet pixel embeddings, superpixels, typicality scoring, DPS sampler classes
 embedder/             evaluate_ddad_fe.py: scorer variant that loads the fine-tuned DVXray backbone
-sampling/             DPS samplers: sampling/dps (CHAOS, DVXray: guided-diffusion + sample_fast.py), generate_recons.py (FFHQ), wire_recons.py
+sampling/             DPS samplers: sampling/dps (CHAOS, DVXray: guided-diffusion + sample_fast.py), generate_recons.py (FFHQ, toy), wire_recons.py
 DDAD_DPS/             reverse process used by the FFHQ sampler
 baselines/            table1_common.py, infer_feature.py, infer_ddad.py, compose.py, ddad_lib/ (DDAD modules)
 full_metric_table.py  pooled and per-image metrics (AUROC, AP, AUPRO, ...)
@@ -319,6 +349,7 @@ configs/              evaluate.py configs per dataset with the paper's settings,
 expected/table1.json  the paper's numbers
 docs/                 HYPERPARAMETERS.md  PROVENANCE.md  BUNDLE.md  REPRODUCIBILITY.md  figures/
 environment/          pip freeze of the four environments (lactos.txt, patchcore.txt, simplenet.txt, ssn_env.txt)
+toy/                  toy experiments: gen_data.py, train_prior.py, score_from_recons.py, run_patchcore.py, analyze_toy{1,2}.py, run_toy{1,2}.sh
 tools/                check_bundle.py (stage 0), seeded_run.py (seeds every stage-2a run)
 ```
 

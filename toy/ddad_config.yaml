@@ -1,0 +1,49 @@
+# DDAD settings of the toy experiments: the prior that toy/train_prior.py trains and the anomaly map that
+# toy/score_from_recons.py --method ddad computes (DDAD's published recipe: frozen WideResNet-101-2 features,
+# v = 1). Paths and the dataset name are passed on the command line.
+data:
+  name: MVTec
+  data_dir: unused
+  category: unused
+  image_size: 256
+  batch_size: 32            # training
+  DA_batch_size: 16
+  test_batch_size: 1
+  mask: True
+  input_channel: 3
+
+model:
+  DDADS: False              # UNetModel(256, 64, dropout 0, 4 heads)
+  checkpoint_dir: unused
+  checkpoint_name: unused
+  exp_name: toy
+  feature_extractor: wide_resnet101_2
+  learning_rate: 3e-4       # training: Adam, weight decay 0.05
+  weight_decay: 0.05
+  epochs: 250
+  load_chp: 250
+  DA_epochs: 4
+  DA_chp: 0
+  v: 1                      # pixel-distance weight in the anomaly map
+  w: 2
+  w_DA: 3
+  DLlambda: 0.1
+  trajectory_steps: 1000    # linear beta schedule 1e-4 .. 0.02
+  test_trajectoy_steps: 250
+  test_trajectoy_steps_DA: 250
+  skip: 25
+  skip_DA: 25
+  eta: 1
+  beta_start: 0.0001
+  beta_end: 0.02
+  device: cuda
+  save_model: True
+  num_workers: 4
+  seed: 42
+  use_frozen_fe: True       # no domain adaptation of the feature extractor
+
+metrics:
+  auroc: True
+  pro: False
+  misclassifications: False
+  visualisation: False

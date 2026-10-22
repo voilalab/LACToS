@@ -1,0 +1,10 @@
+# Rendering parameters shared by every toy dataset (toy/gen_data.py).
+image_size: 256
+supersample: 4            # rendered at 4x and box-averaged: anti-aliased edges
+inlier:
+  intensity_min: 64       # grey level of every object, uniform over [min, max] (inclusive)
+  intensity_max: 255
+counts:
+  train_good: 5000        # training images per dataset
+  test_good: 200          # anomaly-free test images (toy 1 scores the first 50)
+  test_anomalous: 50      # anomalous test images

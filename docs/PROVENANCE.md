@@ -38,7 +38,7 @@
 | `baselines/<bench>/glass/ckpt_best.pth` | GLASS; **`ckpt_best` is selected on the test set by the upstream training code** | idem |
 | `baselines/<bench>/ddad/unet.pth` | DDAD UNet: FFHQ epoch 2000, CHAOS epoch 2000, DvXray epoch 500 | idem |
 
-Training code is not part of this repository.
+Training code for the main experiments (diffusion models, autoencoders, baselines) is not part of this repository; the toy experiments of Section 3 and Appendices B and C train their own priors with `toy/train_prior.py`.
 
 ## How the table's settings were chosen
 

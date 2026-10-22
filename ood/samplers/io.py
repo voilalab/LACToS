@@ -13,6 +13,14 @@ from PIL import Image
 # a `module.` prefix. We strip it and instantiate the non-parallel UNet.
 
 
+DDAD_LIB_DIR = str(Path(__file__).resolve().parent.parent.parent / "baselines" / "ddad_lib")   # vendored DDAD modules
+
+
+def _ensure_ddad_on_path() -> None:
+    if DDAD_LIB_DIR not in sys.path:
+        sys.path.insert(0, DDAD_LIB_DIR)
+
+
 def _strip_module_prefix(state_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
     if not state_dict:
         return state_dict
@@ -52,6 +60,22 @@ _ADM_FFHQ_CONFIG = dict(
 # described ("256x256 images, 96 channels" per CLAUDE.md).
 
 ADM_ARCHS = {"ffhq": _ADM_FFHQ_CONFIG}
+
+
+def load_ddad_unet(ckpt_path: str, device: str = "cuda:0") -> torch.nn.Module:
+    """Load a DDAD UNet (baselines/ddad_lib/unet.py, the architecture DDAD's main.py builds for
+    DDADS=False: UNetModel(256, 64, dropout 0, 4 heads, 3 channels)) from a state dict, with or
+    without DataParallel's `module.` prefix. These are the priors of the toy experiments (toy/)."""
+    _ensure_ddad_on_path()
+    from unet import UNetModel                                   # type: ignore
+    unet = UNetModel(256, 64, dropout=0.0, n_heads=4, in_channels=3)
+    state = torch.load(ckpt_path, map_location="cpu")
+    if isinstance(state, dict):
+        for k in ("state_dict", "model_state_dict", "model"):
+            if k in state and isinstance(state[k], dict):
+                state = state[k]; break
+    unet.load_state_dict(_strip_module_prefix(state), strict=True)
+    return unet.to(device).eval()
 
 
 class _EpsilonUNet(torch.nn.Module):

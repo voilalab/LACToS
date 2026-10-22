@@ -1,11 +1,14 @@
-"""Sample DPS reconstructions of the FFHQ test images with the guided-diffusion FFHQ model.
+"""Sample DPS reconstructions with a diffusion prior in DDAD-UNet or guided-diffusion (ADM) format.
 
     python sampling/generate_recons.py --recon_config configs/recon/adm_dps_ffhq_faces.yaml [--num_seeds N --samples ID ...]
 
 The YAML holds the sampler (`additive_dps`: y = x + sigma n, DPS reverse process) and its
-hyper-parameters, the checkpoint, the image directory, the sample ids and the output root.
-CLI flags override the YAML. Output layout (read by evaluate.py):
-    <out_root>/samples_<id>/adm_dps_whole_0_4/inpainting/{recon/<seed>_0_00000.png, label/0_00000.png, input/0_00000.png}
+hyper-parameters, the checkpoint and its format (`model_backbone`: `adm` for the guided-diffusion
+FFHQ model, `ddad` for the DDAD UNets that toy/train_prior.py trains), the image directory, the
+sample ids and the output root. `save_float: true` also writes the unclamped float32 reconstruction
+(`recon_float/<seed>_0_00000.npy`), which the toy experiments' DDAD scoring reads. CLI flags override
+the YAML. Output layout (read by evaluate.py and toy/score_from_recons.py):
+    <out_root>/samples_<id>/<test_origin>_0_4/inpainting/{recon/<seed>_0_00000.png, label/0_00000.png, input/0_00000.png}
 """
 import argparse
 import json
@@ -22,7 +25,7 @@ sys.path.insert(0, str(ROOT))
 
 from ood.samplers import build_sampler, SAMPLERS
 from ood.samplers.io import (
-    image_to_tensor, load_adm_unet, prepare_sample_dirs,
+    image_to_tensor, load_adm_unet, load_ddad_unet, prepare_sample_dirs,
     save_image_tensor,
 )
 
@@ -104,8 +107,14 @@ def run(cfg: Dict[str, Any]) -> None:
     print(f"[out_root]     {cfg['out_root']}")
     print(f"[num_seeds]    {cfg['num_seeds']}")
 
-    # ADM / guided-diffusion checkpoint (the DPS2022 FFHQ model); `model_arch` names the preset in ood/samplers/io.py
-    unet = load_adm_unet(cfg["ckpt"], device=device, arch=cfg.get("model_arch"))
+    backbone = (cfg.get("model_backbone") or "adm").lower()
+    print(f"[backbone]     {backbone}")
+    if backbone == "adm":        # guided-diffusion checkpoint (the DPS2022 FFHQ model); `model_arch` names the preset in ood/samplers/io.py
+        unet = load_adm_unet(cfg["ckpt"], device=device, arch=cfg.get("model_arch"))
+    elif backbone == "ddad":     # DDAD UNet state dict (toy/train_prior.py)
+        unet = load_ddad_unet(cfg["ckpt"], device=device)
+    else:
+        raise ValueError(f"unknown model_backbone {backbone!r}; expected 'adm' or 'ddad'")
     sampler_cfg = {**cfg["sampler"].get("params", {}), "device": device}
     sampler = build_sampler(cfg["sampler"]["name"], unet, sampler_cfg)
     meta = sampler.metadata
