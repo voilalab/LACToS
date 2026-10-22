@@ -1,6 +1,6 @@
 # The asset bundle `LACToS_assets`
 
-Download: [`LACToS_assets.tar`](https://drive.google.com/file/d/1o5bz1IcF077sUJUqgsZIuAWurfJMjtsj/view?usp=sharing)
+Download: [`LACToS_assets.tar`](https://drive.google.com/file/d/1KFtL_6QT1Yt32jjCPHJgTcOROGFWf61v/view?usp=sharing)
 (Google Drive, 7.5 GB). Extract anywhere and either symlink it to `<repo>/assets` or set
 `ASSETS=/path/to/LACToS_assets` for every script. `bash scripts/check_assets.sh` checks
 that the extracted tree is complete (required files, image and reconstruction counts).

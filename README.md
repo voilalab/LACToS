@@ -36,11 +36,11 @@ were produced with (it also runs the EfficientAD and DDAD baselines).
 ### The asset bundle
 
 Everything the code needs besides itself is in one archive:
-[`LACToS_assets.tar`](https://drive.google.com/file/d/1o5bz1IcF077sUJUqgsZIuAWurfJMjtsj/view?usp=sharing)
+[`LACToS_assets.tar`](https://drive.google.com/file/d/1KFtL_6QT1Yt32jjCPHJgTcOROGFWf61v/view?usp=sharing)
 (Google Drive, 7.5 GB).
 
 ```bash
-pip install gdown && gdown 1o5bz1IcF077sUJUqgsZIuAWurfJMjtsj   # or download from the link above
+pip install gdown && gdown 1KFtL_6QT1Yt32jjCPHJgTcOROGFWf61v   # or download from the link above
 tar xf LACToS_assets.tar                     # -> LACToS_assets/
 ln -s /path/to/LACToS_assets assets          # or: export ASSETS=/path/to/LACToS_assets
 bash scripts/check_assets.sh                 # checks the environment and that the bundle is complete
@@ -60,8 +60,7 @@ Layout of the bundle: `docs/BUNDLE.md`. What each file is and what it was traine
 
 ### Run LACToS on two images
 
-The per-dataset configs in `configs/` hold the paper's settings, so one flag is enough to score a
-set. This scores the first two FFHQ test faces (about one minute on a GPU), draws the heatmaps and
+The per-dataset configs in `configs/` hold the paper's settings. This scores the first two FFHQ test faces (about one minute on a GPU), draws the heatmaps and
 reports the pooled metrics of the two images:
 
 ```bash
@@ -94,8 +93,8 @@ results/quickstart/samples_10.png
 
 ![Expected quick-start output](docs/figures/quickstart_samples_1.png)
 
-The metrics are over two images only and are an installation check, not a result. On a GPU other
-than ours the last digits can differ (see "Main results").
+The metrics are over two images only and are an installation check, not a result. 
+<!-- On a GPU other than ours the last digits can differ (see "Main results"). -->
 
 ### Rebuild Table 1 without a GPU
 
