@@ -1,0 +1,56 @@
+# Template for scoring your own images with LACToS (copy, then edit the `data:` block).
+# Scoring settings are the paper's FFHQ setting (20-px superpixels, 16 intensity bins, histogram sigma 1)
+# with the feature term off, so no autoencoder is needed. To add the feature term, train a
+# PixelAutoEncoder (class in evaluate.py) on your in-distribution images, set autoencoder_path and use_pca: true.
+#
+# Expected input layout (what sampling/ writes; see README "Applying LACToS to other images"):
+#   <results_dir>/samples_<id>/<test_origin>_0_<bottom_suffix>/inpainting/recon/<k>_0_00000.png   M posterior samples of image <id>
+#   <results_dir>/samples_<id>/<test_origin>_0_<bottom_suffix>/inpainting/label/0_00000.png       the image itself
+#   <image_dir>/<id>.png                                                                          the image (superpixels are computed on it)
+#   gt_mask.path with {sample} = <id>: a binary mask, all-zero for anomaly-free images
+sampling: {enabled: false, num_patches: 1}
+
+data:
+  category: mydata             # any label except "CT" (which selects the CT-specific branch)
+  subcategory: test
+  image_dir: /path/to/images
+  results_dir: /path/to/recons
+  test_origin: adm_dps_whole
+  bottom_suffix: "4"
+  figures_dir: results/figures           # superpixel-mask cache
+  gt_mask:
+    path: "/path/to/masks/{sample}_mask.png"
+    downsample_factor: 1
+
+embeddings:
+  backbone: resnet101          # torchvision ResNet, layers 1-3 with 3x3 patch context (1792 dims)
+  layers: [layer1, layer2, layer3]
+  use_patch_context: true
+  patchify_size: 3
+  proj_dim_per_layer: null
+  device: cuda
+  batch_size: 4                # embedding batch; changes float32 round-off, so keep the paper's value (FFHQ 4, CT and X-ray default 16)
+
+pca: {n_components: 3}         # autoencoder latent size
+
+superpixels:
+  target_size: 20               # average superpixel size in pixels (paper Table 5)
+  var_threshold: 0.0
+  min_pixels: 20
+  max_sub: 6
+  max_depth: 4
+  compactness: 12.0
+  alpha_grad: 10.0
+
+scoring:
+  bins_rgb: 16                 # intensity histogram bins
+  bins_pca: 32                 # feature histogram bins (per latent dimension)
+  smooth_sigma: 1.0             # histogram smoothing sigma, in bins
+  min_pixels: 2
+  use_pca: false                # feature term on/off (lambda > 0 / lambda = 0); --no_pca turns it off
+  autoencoder_path: ""
+  ae_encode: direct              # how the latents are computed (CHAOS: folded, FFHQ: direct; see docs/HYPERPARAMETERS.md)
+
+eval:
+  output_dir: results/mydata/json               # per-set summary JSON
+  dump_maps_dir: results/mydata/maps            # one <sample>.npz per image (what scripts/make_table1.py reads)

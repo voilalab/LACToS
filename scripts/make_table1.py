@@ -1,17 +1,30 @@
 #!/usr/bin/env python
-"""Stage 4: build Table 1 from the stage-2 (LACToS) and stage-3 (baseline) outputs and
+"""Stage 3: build Table 1 from the stage-2a (LACToS) and stage-2b (baseline) outputs and
 compare every cell with the paper (expected/table1.json).
 
-  python scripts/make_table1.py                 # all 7 methods x 3 benchmarks
-  python scripts/make_table1.py --only lactos   # LACToS column only (after scripts/score_lactos.sh)
+  python scripts/make_table1.py                   # all 7 methods x 3 benchmarks
+  python scripts/make_table1.py --only lactos     # LACToS column only (after scripts/score_lactos.sh)
   python scripts/make_table1.py --only baselines
+  python scripts/make_table1.py --maps reference  # the bundle's reference maps only (no GPU stage needed)
 
-Writes results/table1.json, results/table1.md, results/table1.tex and prints the diff
-against the paper. Exit code 0 only when every available cell agrees to 4 decimals.
+Which maps: by default (--maps auto) a cell is computed from your own maps under results/ (OUT);
+when a method has no maps there and the bundle holds reference_results/ (the maintainers'
+verification run, docs/REPRODUCIBILITY.md), the reference maps are used and the cell is marked
+"ref". A benchmark that is only partly scored is reported as incomplete, never filled in.
 
-Metrics (tools/metrics via full_metric_table.full_metrics): all valid pixels of all test
-images of a benchmark are pooled; AUROC and AP (average precision) over that pool; AUPRO is
-the area under the per-region-overlap curve up to FPR 0.3, normalised by 0.3.
+Comparison: a cell is "ok" when |reproduced - paper| <= tolerance. Scoring on another GPU, or on
+CPU, changes float32 round-off and moves a few values across histogram-bin edges, which shifts the
+metrics in the third to fourth decimal (docs/REPRODUCIBILITY.md). DDAD's reverse process is
+stochastic (eta = 1) and its seeded noise stream differs between torch builds and GPUs, so its
+cells move more. Tolerances: 0.005, DDAD 0.03. --exact asks for agreement at 4 decimals, which
+holds for the reference maps and for runs on the paper's hardware.
+
+Writes results/table1.json, results/table1.md, results/table1.tex. Exit code 0 only when every
+compared cell is within tolerance (or exact with --exact) and no benchmark is incomplete.
+
+Metrics (full_metric_table.full_metrics): all valid pixels of all test images of a benchmark are
+pooled; AUROC and AP (average precision) over that pool; AUPRO is the area under the
+per-region-overlap curve up to FPR 0.3, normalised by 0.3.
 """
 import argparse, glob, json, os, sys
 import numpy as np
@@ -24,8 +37,8 @@ sys.path.insert(0, os.path.join(ROOT, "baselines"))
 from compose import pub_map                           # noqa: E402
 
 OUT = os.environ.get("OUT", os.path.join(ROOT, "results"))
-LMAPS = os.path.join(OUT, "lactos_maps")
-BMAPS = os.path.join(OUT, "baseline_maps")
+ASSETS = os.environ.get("ASSETS", os.path.join(ROOT, "assets"))
+REFERENCE = os.path.join(ASSETS, "reference_results")   # lactos_maps/ and baseline_maps/ of the verification run
 EXPECTED = json.load(open(os.path.join(ROOT, "expected", "table1.json")))
 BENCHES = ["CT", "ffhq", "xray"]
 NAMES = {"CT": "CHAOS", "ffhq": "FFHQ", "xray": "DVXray"}
@@ -33,6 +46,7 @@ METHODS = ["patchcore", "simplenet", "supersimplenet", "efficientad", "glass", "
 LABELS = {"patchcore": "PatchCore", "simplenet": "SimpleNet", "supersimplenet": "SuperSimpleNet",
           "efficientad": "EfficientAD", "glass": "GLASS", "ddad": "DDAD", "lactos": "LACToS (Ours)"}
 N_IMAGES = {"CT": 200, "ffhq": 100, "xray": 144}
+TOLERANCE = {"ddad": 0.03}; TOLERANCE_DEFAULT = 0.005
 
 # LACToS operating points (paper Table 5): dump tags produced by scripts/score_lactos.sh
 LACTOS = {
@@ -51,10 +65,10 @@ BASELINE = {
 }
 
 
-def _load_dumps(bench, tag, sets):
+def _load_dumps(root, bench, tag, sets):
     """{'<set>/<file>': npz} for every dump of the tag, keyed so that two tags can be paired by image."""
     return {f"{s}/{os.path.basename(f)}": np.load(f)
-            for s in sets for f in sorted(glob.glob(os.path.join(LMAPS, bench, tag, s, "samples_*.npz")))}
+            for s in sets for f in sorted(glob.glob(os.path.join(root, "lactos_maps", bench, tag, s, "samples_*.npz")))}
 
 
 def _valid(z):
@@ -62,14 +76,15 @@ def _valid(z):
     return v.astype(bool) if v.shape == z["delta_map"].shape else np.ones(z["delta_map"].shape, bool)
 
 
-def lactos_cell(bench):
-    """Pooled AUROC / AP / AUPRO of LACToS at the paper's operating point.
-    score = d_rgb + lam * (d_full - d_rgb): lam=1 -> full dump only, lam=0 -> RGB-only dump only."""
+def lactos_cell(bench, root):
+    """Pooled AUROC / AP / AUPRO of LACToS at the paper's operating point, from the dumps under <root>/lactos_maps.
+    score = d_rgb + lam * (d_full - d_rgb): lam=1 -> full dump only, lam=0 -> RGB-only dump only.
+    Returns None (no maps), "incomplete", or [auroc, ap, aupro]."""
     op = LACTOS[bench]
-    full = _load_dumps(bench, op["full"], op["sets"]) if op["lam"] > 0 else None
-    rgb = _load_dumps(bench, op["rgb"], op["sets"]) if op["lam"] < 1 else None
+    full = _load_dumps(root, bench, op["full"], op["sets"]) if op["lam"] > 0 else None
+    rgb = _load_dumps(root, bench, op["rgb"], op["sets"]) if op["lam"] < 1 else None
     base = full if full is not None else rgb
-    if not base:
+    if not base and not (full or rgb):
         return None
     if full is not None and rgb is not None and set(full) != set(rgb):
         print(f"  [incomplete] {bench}: the full and the RGB-only runs cover different images "
@@ -91,10 +106,11 @@ def lactos_cell(bench):
     return [r["pooled_auroc"], r["pooled_aupr"], r["aupro"]]
 
 
-def baseline_cell(bench, method):
+def baseline_cell(bench, method, root):
+    """Same for a baseline, from <root>/baseline_maps/<bench>/<method>/<setting>/*.npz."""
     setting, knob = BASELINE[method][bench]
     bench_dir = bench.lower()                       # baselines/table1_common.py names the benchmarks ffhq / ct / xray
-    files = sorted(glob.glob(os.path.join(BMAPS, bench_dir, method, setting, "*.npz")))
+    files = sorted(glob.glob(os.path.join(root, "baseline_maps", bench_dir, method, setting, "*.npz")))
     if not files:
         return None
     if len(files) != N_IMAGES[bench]:
@@ -110,38 +126,59 @@ def baseline_cell(bench, method):
 
 
 def main():
-    ap = argparse.ArgumentParser()
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0], formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--only", choices=["lactos", "baselines", "all"], default="all")
+    ap.add_argument("--maps", choices=["auto", "mine", "reference"], default="auto",
+                    help="auto: your maps under OUT, the bundle's reference_results/ for methods you did not run; "
+                         "mine: never fall back; reference: the reference maps only")
+    ap.add_argument("--exact", action="store_true", help="require agreement at 4 decimals instead of the tolerance")
     a = ap.parse_args()
     methods = [m for m in METHODS if a.only == "all" or (m == "lactos") == (a.only == "lactos")]
+    have_ref = os.path.isdir(REFERENCE)
+    if a.maps == "reference" and not have_ref:
+        sys.exit(f"no reference maps at {REFERENCE} (the bundle's reference_results/ folder)")
+    roots = {"auto": [("run", OUT)] + ([("ref", REFERENCE)] if have_ref else []),
+             "mine": [("run", OUT)], "reference": [("ref", REFERENCE)]}[a.maps]
     table = {b: {} for b in BENCHES}
+    source = {b: {} for b in BENCHES}
     incomplete = []
     for b in BENCHES:
         for m in methods:
             print(f"{NAMES[b]:7s} {LABELS[m]:15s}", end=" ", flush=True)
-            cell = lactos_cell(b) if m == "lactos" else baseline_cell(b, m)
+            cell, src = None, None
+            for src, root in roots:                 # first root that has maps decides
+                cell = lactos_cell(b, root) if m == "lactos" else baseline_cell(b, m, root)
+                if cell is not None:
+                    break
             if cell is None:
                 print("(no maps)"); continue
             if cell == "incomplete":
                 incomplete.append(f"{NAMES[b]}/{LABELS[m]}"); continue
-            table[b][m] = cell
-            print("AUROC %.4f  AP %.4f  AUPRO %.4f" % tuple(cell))
+            table[b][m] = cell; source[b][m] = src
+            print("AUROC %.4f  AP %.4f  AUPRO %.4f" % tuple(cell) + ("   [ref]" if src == "ref" else ""))
     os.makedirs(OUT, exist_ok=True)
-    json.dump(table, open(os.path.join(OUT, "table1.json"), "w"), indent=1)
+    json.dump({"table": table, "maps": source}, open(os.path.join(OUT, "table1.json"), "w"), indent=1)
 
     # comparison with the paper
-    rows, n_bad, n_cells = [], 0, 0
+    rows, n_bad, n_exact, n_cells = [], 0, 0, 0
     for b in BENCHES:
         for m in methods:
             if m not in table[b]:
                 continue
+            tol = 0 if a.exact else TOLERANCE.get(m, TOLERANCE_DEFAULT)
             for k, met in enumerate(("AUROC", "AP", "AUPRO")):
                 ours, ref = table[b][m][k], EXPECTED[b][m][k]
-                ok = round(ours, 4) == round(ref, 4)
-                n_cells += 1; n_bad += (not ok)
-                rows.append(f"| {NAMES[b]} | {LABELS[m]} | {met} | {ours:.4f} | {ref:.4f} | {ours - ref:+.4f} | {'ok' if ok else 'DIFF'} |")
-    md = ["# Table 1 (reproduced) vs paper", "", "| Dataset | Method | Metric | reproduced | paper | delta | |", "|---|---|---|---:|---:|---:|---|"] + rows
-    md += ["", f"{n_cells - n_bad}/{n_cells} cells agree at 4 decimals."]
+                exact = round(ours, 4) == round(ref, 4)
+                ok = exact or abs(ours - ref) <= tol
+                n_cells += 1; n_bad += (not ok); n_exact += exact
+                rows.append(f"| {NAMES[b]} | {LABELS[m]} | {met} | {ours:.4f} | {ref:.4f} | {ours - ref:+.4f} | "
+                            f"{'ok' if ok else 'DIFF'} | {source[b][m]} |")
+    md = ["# Table 1 (reproduced) vs paper", "",
+          "| Dataset | Method | Metric | reproduced | paper | delta | | maps |", "|---|---|---|---:|---:|---:|---|---|"] + rows
+    crit = "at 4 decimals" if a.exact else f"within tolerance (|delta| <= {TOLERANCE_DEFAULT}, DDAD {TOLERANCE['ddad']})"
+    md += ["", f"{n_cells - n_bad}/{n_cells} cells {crit}" + (f"; {n_exact}/{n_cells} agree at 4 decimals." if not a.exact else ".")]
+    if any(source[b][m] == "ref" for b in BENCHES for m in source[b]):
+        md += ["", "maps = ref: computed from the bundle's reference_results/ (the maintainers' run), not from your run."]
     if incomplete:
         md += ["", "Incomplete (not compared): " + ", ".join(incomplete)]
     open(os.path.join(OUT, "table1.md"), "w").write("\n".join(md) + "\n")
@@ -163,7 +200,12 @@ def main():
     print("\n" + "\n".join(md[2:]))
     print(f"\nwrote {OUT}/table1.{{json,md,tex}}")
     ok = n_bad == 0 and n_cells > 0 and not incomplete
-    print("PASS" if ok else f"FAIL: {n_bad} cell(s) differ from the paper" + (f"; incomplete: {', '.join(incomplete)}" if incomplete else ""))
+    if ok:
+        print(f"PASS: every cell {crit}")
+    elif n_cells == 0:
+        print("FAIL: no complete benchmark to compare" + (f"; incomplete: {', '.join(incomplete)}" if incomplete else ""))
+    else:
+        print(f"FAIL: {n_bad} cell(s) outside the tolerance" + (f"; incomplete: {', '.join(incomplete)}" if incomplete else ""))
     sys.exit(0 if ok else 1)
 
 

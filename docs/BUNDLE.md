@@ -1,7 +1,7 @@
 # The asset bundle `LACToS_assets`
 
-Download: **Google Drive link: TODO (insert after upload)**. Archive: `LACToS_assets.tar`
-(6.7 GB). Extract anywhere and either symlink it to `<repo>/assets` or set
+Download: [`LACToS_assets.tar`](https://drive.google.com/file/d/1o5bz1IcF077sUJUqgsZIuAWurfJMjtsj/view?usp=sharing)
+(Google Drive, 7.5 GB). Extract anywhere and either symlink it to `<repo>/assets` or set
 `ASSETS=/path/to/LACToS_assets` for every script. `bash scripts/check_assets.sh` checks
 that the extracted tree is complete (required files, image and reconstruction counts).
 
@@ -30,6 +30,10 @@ LACToS_assets/
 │   ├── results_patches_adm_dps_faces/samples_<id>/adm_dps_whole_0_4/inpainting/recon/{0..19}_0_00000.png   (22 ids)
 │   ├── results_patches_adm_dps_moreface/...                                              (28 ids)
 │   └── results_patches_adm_dps_faces_normal/...                                          (50 ids)
+├── reference_results/                          stage-2 outputs of the maintainers' verification run (docs/REPRODUCIBILITY.md)
+│   ├── lactos_maps/<bench>/<tag>/<set>/samples_<id>.npz          544 LACToS score maps (what scripts/score_lactos.sh writes)
+│   ├── baseline_maps/<bench>/<method>/<setting>/<set>__<id>.npz  2,664 baseline maps (what scripts/run_baselines.sh writes)
+│   └── table1.{json,md}                        Table 1 computed from them: 63/63 cells equal to the paper
 └── data/
     ├── CT/test/{cta,ctn}/*.png, ground_truth/{cta,ctn}/*_mask.png
     ├── CT/masks/{masks_ood_med_med,masks_body_ood_default_large}/image_{XXXX,6XXX}_mask.png   (LACToS: lesion + body masks)
@@ -43,8 +47,9 @@ LACToS_assets/
 |---|---:|---:|
 | checkpoints | 46 | 5.8 GB |
 | recons | ~7,900 PNG | 0.5 GB |
+| reference_results | 3,208 npz + 2 | 0.7 GB |
 | data | ~1,900 PNG + JSON | 40 MB |
-| **total** | 8,203 | **6.3 GB** |
+| **total** | 11,413 | **7.5 GB** |
 
-The archive is an uncompressed tar (its contents are PNG and PyTorch files, which do not compress).
+The archive is an uncompressed tar (its contents are PNG, compressed npz and PyTorch files, which do not compress further).
 Every file is a plain copy; there are no symlinks inside.

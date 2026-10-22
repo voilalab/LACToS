@@ -1,6 +1,6 @@
 assets/
-results*/
-figures*/
+/results*/
+/figures*/   # scratch output in the repository root; docs/figures/ is tracked
 __pycache__/
 *.pyc
 .pytest_cache/

@@ -1,16 +1,20 @@
-# Core dependencies for the eval harness and reconstruction tools.
-# Tested on Python 3.10.
-torch>=2.0,<3
-torchvision>=0.15
-numpy>=1.24,<2
-scipy>=1.10
-scikit-image>=0.19
-scikit-learn>=1.2
+# The LACToS environment (also runs EfficientAD and DDAD). Python 3.10. Install torch first from the
+# CUDA 11.8 index (README "Installation"); the pins below keep pip from replacing it:
+#   pip install torch==2.0.1 torchvision==0.15.2 --index-url https://download.pytorch.org/whl/cu118
+#   pip install -r requirements.txt
+# environment/lactos.txt is the exact pip freeze of the environment the paper's numbers were produced with.
+torch==2.0.1
+torchvision==0.15.2
+numpy==1.24.3
+scipy==1.10.1
+scikit-image==0.19.2
+scikit-learn==1.2.2
 pillow>=9.5
-matplotlib>=3.7
+matplotlib==3.7.1
+python-dateutil>=2.8     # needed by matplotlib / pandas
 pyyaml>=6.0
-omegaconf>=2.3   # DDAD/ imports OmegaConf
-kornia>=0.6      # DDAD/anomaly_map.py
-torchmetrics>=0.11  # DDAD/metrics.py
-pandas>=2.0      # DDAD/metrics.py PRO computation
-tqdm>=4.60      # sampling/dps/guided_diffusion progress bars
+tqdm>=4.60               # sampling/dps/guided_diffusion progress bars
+omegaconf==2.1.2         # baselines/infer_ddad.py
+kornia==0.6.12           # baselines/ddad_lib/anomaly_map.py
+torchmetrics==0.11.4     # baselines/ddad_lib
+pandas==2.0.1            # baselines/ddad_lib PRO computation

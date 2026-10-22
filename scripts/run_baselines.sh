@@ -1,19 +1,19 @@
 #!/bin/bash
-# Stage 3: baseline inference at the Table 1 settings -> $OUT/baseline_maps/<bench>/<method>/<setting>/<set>__<id>.npz
+# Stage 2b: baseline inference at the Table 1 settings -> $OUT/baseline_maps/<bench>/<method>/<setting>/<set>__<id>.npz
 #
 #   GPU=0 bash scripts/run_baselines.sh                # all three benchmarks (~1.5 GPU-hours, DDAD dominates)
 #   GPU=0 bash scripts/run_baselines.sh ct             # one of: ffhq | ct | xray
 #   LIMIT=2 GPU=0 bash scripts/run_baselines.sh ffhq   # smoke test: first two images of every set
 #
 # Each method runs under its own conda environment (environment/*.txt):
-#   patchcore -> env "patchcore" (python 3.8, faiss)      simplenet, glass -> env "simplenet" (python 3.8)
+#   patchcore -> env "patchcore" (faiss)                  simplenet, glass -> env "simplenet"
 #   supersimplenet -> env "ssn_env"                        efficientad, ddad -> the current interpreter (LACToS env)
 # Override the interpreters with PY_PATCHCORE=..., PY_SIMPLENET=..., PY_SSN=..., PY_DDAD=... or the
 # environment directory with CONDA_ENVS=/path/to/conda/envs. Upstream code: scripts/fetch_third_party.sh.
 #
-# Settings (paper Table 6 + each method's published blur, composed in stage 4):
+# Settings (paper Table 6 + each method's published blur, composed in stage 3):
 #   PatchCore k=1 | EfficientAD alpha: CT 0 (no-pad), FFHQ 0.7, X-ray 0.2 (no-pad) | DDAD T=250 skip=25 eta=1,
-#   w: CT 2, FFHQ 2, X-ray 4 (v applied in stage 4: CT 1, FFHQ 4, X-ray 4) | SimpleNet, SuperSimpleNet, GLASS: default.
+#   w: CT 2, FFHQ 2, X-ray 4 (v applied in stage 3: CT 1, FFHQ 4, X-ray 4) | SimpleNet, SuperSimpleNet, GLASS: default.
 set -euo pipefail
 source "$(dirname "$0")/common.sh"
 CONDA_ENVS="${CONDA_ENVS:-$(conda info --base 2>/dev/null)/envs}"

@@ -5,8 +5,10 @@ Per test image: load the M reconstructions and the image, build / load the SLIC 
 reconstructions with ResNet-101 features compressed by the per-dataset PixelAutoEncoder
 (ood.embeddings + PixelAutoEncoder below), score every superpixel by (NLL - entropy) of the
 image's pixels under the reconstructions' RGB and latent histograms (ood.scoring), and dump the
-delta map. scripts/score_lactos.sh runs this for every set with the paper's flags; stage 4
-pools the dumps into Table 1.
+delta map. The per-dataset configs (configs/lactos_*.yaml) hold the paper's settings, so
+`python evaluate.py --config configs/lactos_ffhq_faces.yaml` scores a set as in the paper; every
+config value can be overridden on the command line. scripts/score_lactos.sh runs every set;
+stage 3 (scripts/make_table1.py) pools the dumps into Table 1.
 
 Reconstruction layout (ood.data): <results_dir>/<sample>/<test_origin>_0_<bottom_suffix>/inpainting/{recon/*.png, label/0_00000.png}
 GT masks: <gt_root>/[<category>/][<subcategory>/]<sample_id>_mask.png, or data.gt_mask.path in the config.
@@ -396,8 +398,8 @@ def _run_subcategory(base_cfg, category, subcategory, sample_names, output_dir):
     cfg["data"]["category"]     = category
     cfg["data"]["subcategory"]  = subcategory
     cfg["data"]["figures_dir"]  = os.path.join(base_cfg["data"]["figures_dir"], category, subcategory)
-    if base_cfg["data"].get("image_dir_fixed"):
-        print(f"  Image dir    : {cfg['data']['image_dir']} (--image_dir)")
+    if base_cfg["data"].get("image_dir"):          # from the config or --image_dir
+        print(f"  Image dir    : {cfg['data']['image_dir']}")
     elif category != "CT":
         category_root = os.path.dirname(cfg["data"]["gt_root"])
         cfg["data"]["image_dir"] = os.path.join(category_root, "test", subcategory)
@@ -451,8 +453,8 @@ def _run_subcategory(base_cfg, category, subcategory, sample_names, output_dir):
 def main():
     p = argparse.ArgumentParser(description="LACToS scoring: reconstructions -> superpixel typicality -> per-image delta-map dumps")
     p.add_argument("--config",            required=True, help="configs/lactos_*.yaml")
-    p.add_argument("--category",          required=True, help="CT | xray | faces")
-    p.add_argument("--subcategory",       required=True, help="image set within the category (cta, ctn, xrsc, xrgd, random)")
+    p.add_argument("--category",          default=None, help="CT | xray | faces (default: data.category of the config; 'CT' selects the CT branch)")
+    p.add_argument("--subcategory",       default=None, help="image set within the category, e.g. cta, ctn, xrsc, xrgd, random (default: data.subcategory of the config)")
     p.add_argument("--results_root",      default=None,
                    help="Reconstructions in the <root>_<category>_<subcategory> layout (CT, xray).")
     p.add_argument("--results_dir",       default=None,
@@ -483,6 +485,10 @@ def main():
 
     cfg = load_config(args.config)
     cfg.setdefault("sampling", {})["enabled"] = False
+    category = args.category or cfg["data"].get("category")
+    subcategory = args.subcategory or cfg["data"].get("subcategory")
+    if not category or not subcategory:
+        p.error("--category / --subcategory are needed when the config has no data.category / data.subcategory")
     if args.device:                        cfg["embeddings"]["device"]        = args.device
     if args.output_dir:                    cfg["eval"]["output_dir"]          = args.output_dir
     if args.backbone:                      cfg["embeddings"]["backbone"]      = args.backbone
@@ -498,9 +504,7 @@ def main():
         cfg["data"]["results_dir"] = args.results_dir
         cfg["data"].pop("results_root", None)
     if args.gt_root:                       cfg["data"]["gt_root"]             = args.gt_root
-    if args.image_dir:
-        cfg["data"]["image_dir"] = args.image_dir
-        cfg["data"]["image_dir_fixed"] = True
+    if args.image_dir:                     cfg["data"]["image_dir"]           = args.image_dir
     if args.figures_dir:                   cfg["data"]["figures_dir"]         = args.figures_dir
     if args.superpixel_target_size is not None:
         cfg.setdefault("superpixels", {})["target_size"] = args.superpixel_target_size
@@ -509,7 +513,7 @@ def main():
     if args.dump_maps:
         cfg.setdefault("eval", {})["dump_maps_dir"] = args.dump_maps
 
-    _run_subcategory(cfg, args.category, args.subcategory, None, cfg["eval"]["output_dir"])
+    _run_subcategory(cfg, category, subcategory, None, cfg["eval"]["output_dir"])
 
 
 if __name__ == "__main__":

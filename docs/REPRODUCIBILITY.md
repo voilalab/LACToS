@@ -20,16 +20,30 @@ the files the paper's numbers were computed from; not part of this repository):
 
 Hardware / software of the run: NVIDIA RTX A6000 (48 GB), CUDA 11.8 driver stack, Python 3.10.20,
 torch 2.0.1+cu118, torchvision 0.15.2, scikit-image 0.19.2, scikit-learn 1.2.2, scipy 1.10.1
-(`environment/ddad.txt`); baselines in `environment/{patchcore,simplenet,ssn_env}.txt`.
+(`environment/lactos.txt`); baselines in `environment/{patchcore,simplenet,ssn_env}.txt`.
+
+## 2026-10-21 — independent run on another machine (a colleague's clone, different GPU)
+
+Stages 2a-2b and 3 from the bundle, SimpleNet and GLASS skipped (their environment did not install
+at the time; fixed since in `environment/simplenet.txt`). LACToS: all three benchmarks within
+0.0023 of the paper (FFHQ and DVXray equal at 4 decimals, CHAOS 0.9616 / 0.4295 / 0.8751, i.e.
+the round-off variant below). PatchCore, SuperSimpleNet, EfficientAD: within 0.0003. DDAD: within
+0.012 on AUROC / AP and 0.026 on AUPRO (its reverse process is stochastic, see below). 21 of 45
+cells equal at 4 decimals. This is the expected outcome on hardware other than the paper's;
+`scripts/make_table1.py` reports it as PASS under its tolerance (0.005, DDAD 0.03).
 
 ## What is deterministic and what is not
 
-* Stages 2-4 from the bundled reconstructions are deterministic on a given machine: two runs on the
+* Stages 2-3 from the bundled reconstructions are deterministic on a given machine: two runs on the
   same GPU model give identical dumps. Other hardware changes float32 round-off, which moves a few
   values across histogram-bin edges. Measured for the CHAOS LACToS cell (0.9620 / 0.4318 / 0.8764 on
   an RTX A6000): 0.9616 / 0.4295 / 0.8751 when scored on CPU (`evaluate.py --device cpu`), and
   0.9620 / 0.4318 / 0.8765 with `--ae_encode direct`. Report the table your run produces together
   with the diff in `results/table1.md`.
+* DDAD (stage 2b) draws noise in its reverse process (η = 1). The noise is seeded per image, but the
+  stream a seed produces differs between torch builds and GPUs, so DDAD's maps and cells move more
+  than the others' on another machine (up to ~0.03 AUPRO observed). The other five baselines are
+  deterministic feed-forward passes and agree to the fourth decimal up to round-off.
 * Stage 1 (sampling): FFHQ reproduces the bundled reconstructions up to PNG rounding; CHAOS and
   DVXray give new posterior draws on every run, which changes their LACToS cells in the second to
   third decimal (table in `sampling/README.md`).

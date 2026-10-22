@@ -74,13 +74,33 @@ def data_problems(root):
     return out
 
 
+EXPECTED_REFERENCE = {"lactos_maps": 544, "baseline_maps": 2664}   # reference_results/: 544 = 200 CT + 2 x 100 FFHQ + 144 X-ray dumps; 2664 = 6 methods x 444 images
+
+
+def reference_problems(root):
+    """reference_results/ (the maintainers' stage-2 outputs, read by scripts/make_table1.py) is optional,
+    but when present it must be complete."""
+    base = os.path.join(root, "reference_results")
+    if not os.path.isdir(base):
+        print("   reference_results/ absent (optional: scripts/make_table1.py can then only use maps you computed)")
+        return []
+    out = []
+    for d, n in EXPECTED_REFERENCE.items():
+        k = sum(len([f for f in fs if f.endswith(".npz")]) for _, _, fs in os.walk(os.path.join(base, d)))
+        if k != n:
+            out.append(f"reference_results/{d}: {k} npz maps, expected {n}")
+    if not out:
+        print(f"   reference_results/ present ({EXPECTED_REFERENCE['lactos_maps']} LACToS + {EXPECTED_REFERENCE['baseline_maps']} baseline maps)")
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("assets")
     a = ap.parse_args()
     root = a.assets
     problems = [f"missing file {f}" for f in EXPECTED_FILES if not os.path.exists(os.path.join(root, f))]
-    problems += data_problems(root) + recon_problems(root)
+    problems += data_problems(root) + recon_problems(root) + reference_problems(root)
     for p in problems:
         print("  ", p)
     if problems:

@@ -2,6 +2,9 @@
 
 ## LACToS (`scripts/score_lactos.sh` → `evaluate.py`)
 
+The values below are the defaults of `configs/lactos_{ct,xray,ffhq_*}.yaml`; the flags named in the
+table override them on the command line.
+
 Shared by every run: ResNet-101 (torchvision `IMAGENET1K_V2`) layer1–3 features with 3×3 patch
 context, L2-normalised per layer and concatenated (1792 dims); a per-dataset PixelAutoEncoder
 compresses them to 3 dims (`--n_pca 3`, `--autoencoder_path`); the superpixels are a
@@ -12,7 +15,7 @@ superpixel, one histogram over the RGB values and one over the
 3 latent values of all reconstruction pixels (`--bins_rgb`, `--bins_pca`), optionally smoothed
 with a Gaussian of `--smooth_sigma` bins; the score is (NLL − entropy) of the test image's pixels
 under each histogram, intensity term + λ · feature term; the per-superpixel map is smoothed with a
-spatial Gaussian (stage 4).
+spatial Gaussian (stage 3).
 
 | | CHAOS | FFHQ | DVXray |
 |---|---|---|---|
@@ -20,8 +23,8 @@ spatial Gaussian (stage 4).
 | `--superpixel_target_size` | 100 | 20 | 10 |
 | `--smooth_sigma` (histogram) | 0.5 | 1 | 0 |
 | `--bins_rgb` × `--bins_pca` | 16 × 64 | 16 × 32 | 16 × 16 |
-| λ (stage 4) | 1 | 0.25 (full dump + `--no_pca` dump) | 0 (`--no_pca` dump only) |
-| spatial σ (stage 4) | 2 | 5 | 5 |
+| λ (stage 3) | 1 | 0.25 (full dump + `--no_pca` dump) | 0 (`--no_pca` dump only) |
+| spatial σ (stage 3) | 2 | 5 | 5 |
 | backbone | torchvision ResNet-101 | torchvision ResNet-101 | `backbone_xray_ddad_lastlayer_feat4.pth` via `embedder/evaluate_ddad_fe.py` (`DDAD_FE_WEIGHTS`) |
 | autoencoder | `ae_CT.pth` | `ae_faces.pth` | `ae_xray.pth` (not used at λ = 0) |
 | `--ae_encode` | **folded** | direct | — |
